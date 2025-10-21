@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexNucleus: Web & Cloud Solutions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #1E1E2C;
+        color: #f8fafc; /* light text for dark background */
+      }
+
+      /* --- Scroll Animation System --- */
+      
+      /* Base class for JS to find elements, no visual effect */
+      .scroll-animate {}
+
+      /* Fade In */
+      .fade-in {
+        opacity: 0;
+        transition: opacity 1s ease-out;
+      }
+      .fade-in.is-visible {
+        opacity: 1;
+      }
+
+      /* Slide Up + Fade In */
+      .slide-up {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+      }
+      .slide-up.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* Scale Up + Fade In */
+      .scale-up {
+        opacity: 0;
+        transform: scale(0.95);
+        transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      .scale-up.is-visible {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      /* Delays */
+      .delay-100 { transition-delay: 100ms; }
+      .delay-200 { transition-delay: 200ms; }
+      .delay-300 { transition-delay: 300ms; }
+      .delay-400 { transition-delay: 400ms; }
+      .delay-500 { transition-delay: 500ms; }
+      
+      /* Pulse animation for map dots */
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          opacity: 0.75;
+        }
+        100% {
+          transform: scale(3.5);
+          opacity: 0;
+        }
+      }
+      .map-dot {
+        animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* 3D Float Animation for Hero Graphic */
+      @keyframes float3d {
+        0%, 100% {
+          transform: translateY(0px) rotateX(15deg) rotateY(10deg);
+        }
+        50% {
+          transform: translateY(-25px) rotateX(15deg) rotateY(-10deg);
+        }
+      }
+      .animate-float-3d {
+        animation: float3d 8s infinite ease-in-out;
+      }
+
+      /* Blinking light animation */
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+      .animate-blink {
+        animation: blink 2.2s infinite ease-in-out;
+      }
+      
+      /* Chat widget slide-in animation */
+      @keyframes slide-in-up {
+        from {
+          transform: translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .animate-slide-in-up {
+        animation: slide-in-up 0.3s ease-out forwards;
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.4",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.546.0",
+    "process": "https://aistudiocdn.com/process@^0.11.10",
+    "express": "https://aistudiocdn.com/express@^5.1.0",
+    "jsonwebtoken": "https://aistudiocdn.com/jsonwebtoken@^9.0.2",
+    "multer": "https://aistudiocdn.com/multer@^2.0.2",
+    "mongoose": "https://aistudiocdn.com/mongoose@^8.19.2",
+    "bcryptjs": "https://aistudiocdn.com/bcryptjs@^3.0.2",
+    "dotenv": "https://aistudiocdn.com/dotenv@^17.2.3",
+    "cors": "https://aistudiocdn.com/cors@^2.8.5",
+    "http": "https://aistudiocdn.com/http@^0.0.1-security",
+    "socket.io": "https://aistudiocdn.com/socket.io@^4.8.1",
+    "path": "https://aistudiocdn.com/path@^0.12.7",
+    "url": "https://aistudiocdn.com/url@^0.11.4",
+    "crypto": "https://aistudiocdn.com/crypto@^1.0.1",
+    "speakeasy": "https://aistudiocdn.com/speakeasy@^2.0.0",
+    "socket.io-client": "https://aistudiocdn.com/socket.io-client@^4.8.1",
+    "fs": "https://aistudiocdn.com/fs@^0.0.1-security",
+    "razorpay": "https://aistudiocdn.com/razorpay@^2.9.6",
+    "pino": "https://aistudiocdn.com/pino@^10.1.0",
+    "qrcode": "https://aistudiocdn.com/qrcode@^1.5.4",
+    "vite": "https://aistudiocdn.com/vite@^7.1.11",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.4"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
