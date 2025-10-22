@@ -231,6 +231,7 @@ router.post('/:id/messages', async (req: Request, res: Response, next: NextFunct
 
 // @desc    Upload an attachment to a ticket
 // @route   POST /api/tickets/:id/upload
+// FIX: Add explicit Request, Response, and NextFunction types to resolve overload error.
 router.post('/:id/upload', upload.single('attachment'), async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.file) throw new ApiError(400, 'Please upload a file');

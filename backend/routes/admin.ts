@@ -148,15 +148,22 @@ router.get('/users/:id', async (req: Request, res: Response, next: NextFunction)
 // @route   PUT /api/admin/users/:id
 router.put('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const user = await User.findById(req.params.id);
-        if (!user) throw new ApiError(404, 'User not found');
+        const updateData: { [key: string]: any } = {
+            name: req.body.name,
+            email: req.body.email,
+            role: req.body.role,
+            status: req.body.status,
+        };
+        
+        // Remove undefined properties so they don't overwrite existing fields
+        Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
-        user.name = req.body.name || user.name;
-        user.email = req.body.email || user.email;
-        user.role = req.body.role || user.role;
-        user.status = req.body.status || user.status;
+        const updatedUser = await User.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: false });
 
-        const updatedUser = await user.save();
+        if (!updatedUser) {
+            throw new ApiError(404, 'User not found');
+        }
+        
         res.json(updatedUser);
     } catch (error) {
         next(error);

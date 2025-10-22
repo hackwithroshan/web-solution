@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User } from '../types';
 import { useToast } from './useToast';
+import { sendRegistrationOtp } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<{ twoFactorRequired?: boolean; twoFactorToken?: string; }>;
   verifyLogin2FA: (token: string, code: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone: string, address: string, companyName?: string, gstNumber?: string) => Promise<void>;
+  register: (name: string, email: string, password: string, phone: string, address: string, otp: string, companyName?: string, gstNumber?: string) => Promise<void>;
   logout: () => void;
   updateUser: (updatedUser: User) => void;
   isLoading: boolean;
@@ -102,13 +103,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
 
-  const register = async (name: string, email: string, password: string, phone: string, address: string, companyName?: string, gstNumber?: string) => {
+  const register = async (name: string, email: string, password: string, phone: string, address: string, otp: string, companyName?: string, gstNumber?: string) => {
     setIsLoading(true);
     try {
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, phone, address, companyName, gstNumber }),
+        body: JSON.stringify({ name, email, password, phone, address, companyName, gstNumber, otp }),
       });
       const data = await handleAuthResponse(response);
       

@@ -38,6 +38,7 @@ import ReferAndEarnPage from './pages/ReferAndEarnPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import NetworkStatusBanner from './components/NetworkStatusBanner';
 import AdminManageChatbotPage from './pages/AdminManageChatbotPage';
+import WebsitePerformancePage from './pages/WebsitePerformancePage';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
@@ -71,6 +72,7 @@ const AppContent: React.FC = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/website-analyzer" element={<WebsitePerformancePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />

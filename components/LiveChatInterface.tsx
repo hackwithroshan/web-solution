@@ -110,12 +110,12 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
                             isOwn={msg.sender === (isAdmin ? MessageSender.BOT : MessageSender.USER)}
                             showAvatar={showAvatar}
                         />
-                    )
+                    );
                 })}
-                {isTyping && (
+                 {isTyping && (
                     <div className="flex items-end gap-3 my-1 justify-start">
                         <div className="w-9 h-9 flex-shrink-0">
-                            <div className="bg-gray-200 p-2 rounded-full flex-shrink-0">
+                             <div className="bg-gray-200 p-2 rounded-full flex-shrink-0">
                                 {isAdmin ? <User className="w-5 h-5 text-gray-600" /> : <Bot className="w-5 h-5 text-gray-600" />}
                             </div>
                         </div>
@@ -134,15 +134,15 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
             </div>
             <div className="p-4 border-t bg-gray-50">
                 <form onSubmit={handleSend} className="flex items-center gap-3">
-                    <input 
-                        type="text" 
-                        value={input} 
-                        onChange={handleInputChange} 
-                        placeholder="Type your message..." 
+                    <input
+                        type="text"
+                        value={input}
+                        onChange={handleInputChange}
+                        placeholder="Type your message..."
                         className="flex-1 p-2 border rounded-full px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button type="submit" disabled={!input.trim()} className="bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700 disabled:bg-blue-300">
-                        <Send className="w-5 h-5"/>
+                        <Send className="w-5 h-5" />
                     </button>
                 </form>
             </div>

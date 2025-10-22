@@ -23,6 +23,7 @@ import chatRoutes from './routes/chat.js';
 import { publicFaqRouter, adminFaqRouter } from './routes/faq.js';
 import notificationRoutes from './routes/notifications.js';
 import announcementRoutes from './routes/announcements.js';
+import performanceRoutes from './routes/performance.js';
 
 const PORT = process.env.PORT || 3001;
 const MONGO_URI = process.env.MONGO_URI;
@@ -53,6 +54,7 @@ app.use('/api/faqs', publicFaqRouter);
 app.use('/api/admin/faqs', adminFaqRouter);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin/announcements', announcementRoutes);
+app.use('/api/performance', performanceRoutes);
 
 // --- Live Chat State (In-memory, reset on server restart) ---
 interface LiveChatUser {
@@ -176,6 +178,7 @@ io.on('connection', (socket) => {
     for (const sessionId in activeSessions) {
         const session = activeSessions[sessionId];
         if (session.userSocketId === socket.id || session.adminSocketId === socket.id) {
+            io.to(sessionId).emit('hasStoppedTyping'); // Clear typing indicator for the other user
             io.to(sessionId).emit('chatSessionEnded'); // Notify other user
             delete activeSessions[sessionId];
              logger.info(`Session ${sessionId} ended due to disconnect.`);

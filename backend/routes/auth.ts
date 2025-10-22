@@ -4,8 +4,14 @@ import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
 import ApiError from '../utils/ApiError.js';
 import speakeasy from 'speakeasy';
+import { sendWelcomeEmail, sendPasswordResetEmail, sendRegistrationOtpEmail } from '../utils/sendEmail.js';
 
 const router = express.Router();
+
+// In-memory store for registration OTPs. In a production environment,
+// a more persistent store like Redis would be preferable.
+const otpStore = new Map<string, { otp: string; expires: number }>();
+
 
 // A utility function to generate JWT
 const generateToken = (id: any, expiresIn: string | number = '1d') => {
@@ -16,13 +22,56 @@ const generateToken = (id: any, expiresIn: string | number = '1d') => {
     return jwt.sign({ id }, secret as Secret, { expiresIn } as SignOptions);
 };
 
+// @desc    Send a verification OTP to a new user's email
+// @route   POST /api/auth/send-verification-otp
+router.post('/send-verification-otp', async (req: Request, res: Response, next: NextFunction) => {
+    const { email } = req.body;
+    try {
+        if (!email) {
+            throw new ApiError(400, 'Email is required.');
+        }
+
+        const userExists = await User.findOne({ email });
+        if (userExists) {
+            throw new ApiError(400, 'An account with this email already exists.');
+        }
+
+        // Generate a 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Store the OTP with a 5-minute expiration
+        otpStore.set(email, { otp, expires: Date.now() + 5 * 60 * 1000 });
+
+        // Send the email and wait for it to complete
+        await sendRegistrationOtpEmail(email, otp);
+
+        res.status(200).json({ message: 'A verification code has been sent to your email.' });
+
+    } catch (error) {
+        next(error);
+    }
+});
+
+
 // @desc    Register a new user
 // @route   POST /api/auth/register
 router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
-    const { name, email, password, phone, address, companyName, gstNumber } = req.body;
+    const { name, email, password, phone, address, companyName, gstNumber, otp } = req.body;
     try {
-        const userExists = await User.findOne({ email });
+        // --- OTP Verification ---
+        const storedOtpData = otpStore.get(email);
+        if (!storedOtpData) {
+            throw new ApiError(400, 'Please request a verification code first.');
+        }
+        if (storedOtpData.expires < Date.now()) {
+            otpStore.delete(email); // Clean up expired OTP
+            throw new ApiError(400, 'Your verification code has expired. Please request a new one.');
+        }
+        if (storedOtpData.otp !== otp) {
+            throw new ApiError(400, 'The verification code is incorrect.');
+        }
 
+        const userExists = await User.findOne({ email });
         if (userExists) {
             throw new ApiError(400, 'User already exists');
         }
@@ -32,7 +81,14 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
         });
 
         if (user) {
+            // OTP is valid, clean it up
+            otpStore.delete(email);
+            
             const token = generateToken(user._id);
+            
+            // Send welcome email (fire and forget)
+            sendWelcomeEmail(user.email, user.name);
+
             res.status(201).json({
                 user, // send full user object
                 token
@@ -112,18 +168,50 @@ router.post('/login/verify-2fa', async (req: Request, res: Response, next: NextF
 // @access  Public
 router.post('/forgot-password', async (req: Request, res: Response, next: NextFunction) => {
     const { email } = req.body;
+    const genericSuccessMessage = 'If an account with that email exists, a password reset link has been sent.';
+
     try {
         const user = await User.findOne({ email });
+
+        // If a user is found, attempt to send the email.
+        // Any errors inside this block will be caught by the catch block below.
         if (user) {
             const resetToken = crypto.randomBytes(20).toString('hex');
-            user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-            user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-            await user.save();
-            // In a real app, you would email this token to the user.
-            // For this example, we just confirm the process started.
+            
+            // Hashed token to store in DB
+            const resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+            const resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+            await User.updateOne(
+                { _id: user._id },
+                {
+                    $set: {
+                        resetPasswordToken,
+                        resetPasswordExpire,
+                    },
+                }
+            );
+            
+            // Construct reset URL and send email
+            const frontendUrl = process.env.FRONTEND_URL || req.headers.origin;
+            if (!frontendUrl) {
+                throw new ApiError(500, "Server configuration error: Frontend URL not set and origin header not available.");
+            }
+            
+            // The frontend uses HashRouter, so the path needs a '#'
+            const resetUrl = `${frontendUrl}/#/reset-password/${resetToken}`;
+            
+            // Await the email sending. If it throws, the catch block will handle it.
+            await sendPasswordResetEmail(user.email, resetUrl);
         }
-        res.status(200).json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+
+        // To prevent user enumeration attacks, always return the same success message
+        // whether the user was found or not. The catch block handles actual failures.
+        res.status(200).json({ message: genericSuccessMessage });
+        
     } catch (error) {
+        // Pass any failures (DB error, email service error, etc.) to the error handler.
+        // The user will receive a specific error message about the failure.
         next(error);
     }
 });

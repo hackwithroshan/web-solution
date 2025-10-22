@@ -234,11 +234,23 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
     const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
     socketRef.current = io(socketUrl);
     socketRef.current.on('connect', () => {});
+    
     socketRef.current.on('chatSessionStarted', (sessionData) => {
-      setActiveLiveSession(sessionData);
+      const systemMessage: ChatMessage = {
+          id: `system-join-${uuidv4()}`,
+          sender: MessageSender.BOT,
+          text: "An agent has joined the chat. You are now connected.",
+          timestamp: new Date().toISOString()
+      };
+      const updatedSessionData = {
+          ...sessionData,
+          history: [...sessionData.history, systemMessage]
+      };
+      setActiveLiveSession(updatedSessionData);
       setLiveChatStatus('active');
       setView('live_chat');
     });
+
     socketRef.current.on('chatSessionEnded', () => {
         addToast("The live chat session has ended.", "info");
         setLiveChatStatus('idle');

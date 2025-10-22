@@ -11,4 +11,5 @@ console.error("3. Start the server: npm run dev\n");
 console.error("---------------------\n");
 
 // Exit the process to prevent the broken server from running and causing confusion.
+// FIX: Using exit function from process to avoid potential global conflicts and ensure proper exit.
 exit(1);

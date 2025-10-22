@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
-import { Ticket, TicketStatus, TicketPriority, LiveChatRequest, ChatMessage } from '../types';
+import { Ticket, TicketStatus, TicketPriority, LiveChatRequest, ChatMessage, MessageSender } from '../types';
 import { fetchAllTickets } from '../services/api';
 import AdminSidebar from '../components/AdminSidebar';
 import DashboardHeader from '../components/DashboardHeader';
@@ -123,7 +123,16 @@ const AdminSupportPage: React.FC = () => {
         });
         
         socketRef.current.on('chatSessionStarted', (sessionData) => {
-            setActiveLiveSession(sessionData);
+            const systemMessage: ChatMessage = {
+                id: `system-join-${Date.now()}`,
+                sender: MessageSender.BOT, // System messages can be from BOT
+                text: `You are now connected with ${sessionData.user.name}. The user's previous chat history is below.`,
+                timestamp: new Date().toISOString(),
+            };
+            setActiveLiveSession({
+                ...sessionData,
+                history: [...sessionData.history, systemMessage]
+            });
         });
 
         // Load tickets

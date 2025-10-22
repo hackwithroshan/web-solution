@@ -2,7 +2,8 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import User from './models/User';
 import Service from './models/Service';
-import { exit, argv } from 'process';
+// FIX: Removed import of exit and argv from process to use globals.
+
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ const connectDB = async () => {
     console.log('MongoDB Connected for seeding...');
   } catch (err: any) {
     console.error(err.message);
-    exit(1);
+    process.exit(1);
   }
 };
 
@@ -65,10 +66,10 @@ const importData = async () => {
     await Service.insertMany(userServices);
 
     console.log('Database seeded successfully!');
-    exit();
+    process.exit();
   } catch (error) {
     console.error('Error with data import:', error);
-    exit(1);
+    process.exit(1);
   }
 };
 
@@ -77,16 +78,16 @@ const destroyData = async () => {
         await User.deleteMany();
         await Service.deleteMany();
         console.log('Data Destroyed!');
-        exit();
+        process.exit();
     } catch (error) {
         console.error('Error with data destruction:', error);
-        exit(1);
+        process.exit(1);
     }
 };
 
 const run = async () => {
     await connectDB();
-    if (argv[2] === '-d') {
+    if (process.argv[2] === '-d') {
         await destroyData();
     } else {
         await importData();

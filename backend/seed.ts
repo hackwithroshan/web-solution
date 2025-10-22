@@ -8,7 +8,6 @@ import Payment from './models/Payment.js';
 import Notification from './models/Notification.js';
 import Announcement from './models/Announcement.js';
 // FIX: Import exit and argv from process to resolve typing issues.
-import { exit, argv } from 'process';
 import crypto from 'crypto';
 
 dotenv.config();
@@ -21,7 +20,7 @@ const connectDB = async () => {
     console.log('MongoDB Connected for seeding...');
   } catch (err: any) {
     console.error(err.message);
-    exit(1);
+    process.exit(1);
   }
 };
 
@@ -114,98 +113,45 @@ const importData = async () => {
         tags: ['featured']
       },
       {
-        name: 'Enterprise Hosting',
-        category: categoryMap['Web Hosting'],
-        price: 999,
-        priceUnit: '/month',
-        description: 'Advanced solutions for large-scale applications.',
-        keyFeatures: ['Unlimited Websites', '200GB SSD Storage', 'Unmetered Bandwidth', 'Advanced Security', 'Dedicated Support Agent'],
-        tags: []
-      },
-      {
-        name: 'Premium Domain Registration',
-        category: categoryMap['Domain Registration'],
-        price: 899,
-        priceUnit: '/year',
-        description: 'Secure your perfect domain name with premium registration and advanced DNS management features.',
-        keyFeatures: ['Free DNS Management', 'Domain privacy protection', '24/7 Support'],
-        tags: ['Popular', 'Best Value']
-      },
-      {
-        name: 'E-commerce Website Development',
-        category: categoryMap['Web Development'],
-        price: 45000,
+        name: 'Podcast Studio Hour',
+        category: categoryMap['Podcast Studio'],
+        price: 100,
         priceUnit: '/project',
-        description: 'Complete e-commerce solution with payment gateway integration, inventory management, and a mobile-ready design.',
-        keyFeatures: ['Mobile-responsive design', 'Payment gateway integration', 'Inventory management'],
-        tags: ['Custom Design', 'Mobile Ready']
+        description: 'One hour of studio time.',
+        keyFeatures: ['Professional microphone', 'Soundproofed room'],
+        tags: []
       }
     ]);
-    
-    // Create notifications for 'Alice Johnson'
-    const userNotifications = [
-        {
-            user: regularUser._id,
-            type: 'billing' as const,
-            title: 'Payment Successful',
-            message: 'Your payment of ₹59.00 for Business Hosting has been successfully processed.',
-            isRead: true,
-        },
-        {
-            user: regularUser._id,
-            type: 'announcement' as const,
-            title: 'New AI Features Live!',
-            message: 'We\'ve launched new AI-powered development services. Check them out in the services section.',
-            isRead: false,
-        },
-        // RENEWAL NOTIFICATIONS
-        {
-            user: regularUser._id, type: 'service' as const, title: 'Renewal Reminder (30 Days)',
-            message: 'Your "apex-website.com Domain" is set to expire in 25 days. Renew now to avoid service interruption.', isRead: true,
-        },
-        {
-            user: regularUser._id, type: 'service' as const, title: 'CRITICAL: Service Expiring Soon (7 Days)',
-            message: 'Your "Managed Security" plan will expire in 6 days. Immediate action is required.', isRead: false,
-        },
-        {
-            user: regularUser._id, type: 'service' as const, title: 'URGENT: Service EXPIRED',
-            message: 'Your "AI Development Package" has expired. Please renew immediately to restore service.', isRead: false,
-        },
-        {
-            user: regularUser._id, type: 'service' as const, title: 'FINAL NOTICE: Service Expires Today',
-            message: 'Your "Podcast Studio Rental" service expires today. Renew now!', isRead: false,
-        }
-    ];
-    await Notification.insertMany(userNotifications);
+
 
     console.log('Database seeded successfully!');
-    exit();
+    process.exit();
   } catch (error) {
     console.error('Error with data import:', error);
-    exit(1);
+    process.exit(1);
   }
 };
 
 const destroyData = async () => {
     try {
-        await User.deleteMany({});
+        await User.deleteMany();
         await Service.deleteMany();
         await Category.deleteMany();
         await ServicePlan.deleteMany();
-        await Payment.deleteMany({});
-        await Notification.deleteMany({});
-        await Announcement.deleteMany({});
+        await Payment.deleteMany();
+        await Notification.deleteMany();
+        await Announcement.deleteMany();
         console.log('Data Destroyed!');
-        exit();
+        process.exit();
     } catch (error) {
         console.error('Error with data destruction:', error);
-        exit(1);
+        process.exit(1);
     }
 };
 
 const run = async () => {
     await connectDB();
-    if (argv[2] === '-d') {
+    if (process.argv[2] === '-d') {
         await destroyData();
     } else {
         await importData();

@@ -58,6 +58,13 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
   return response.json();
 };
 
+// --- Auth ---
+export const sendRegistrationOtp = (email: string): Promise<{ message: string }> => apiFetch('/api/auth/send-verification-otp', { method: 'POST', body: JSON.stringify({ email }) });
+
+
+// --- Website Performance ---
+export const analyzeWebsitePerformance = (url: string): Promise<any> => apiFetch('/api/performance/analyze', { method: 'POST', body: JSON.stringify({ url }) });
+
 // --- User & Service Management ---
 export const fetchUserServices = (userId: string): Promise<UserService[]> => apiFetch(`/api/users/${userId}/services`);
 export const fetchPaymentHistory = (userId: string): Promise<Payment[]> => apiFetch(`/api/users/${userId}/payments`);

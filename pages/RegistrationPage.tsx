@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { sendRegistrationOtp } from '../services/api';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { Loader, User, Mail, Lock, Building, Phone, MapPin, FileText, ArrowRight } from 'lucide-react';
+import { Loader, User, Mail, Lock, Building, Phone, MapPin, FileText, ArrowRight, KeyRound } from 'lucide-react';
 import PasswordStrengthMeter from '../components/ui/PasswordStrengthMeter';
+import { useToast } from '../hooks/useToast';
 
 const AuthGraphic: React.FC = () => (
   <div className="hidden lg:flex flex-col items-center justify-center bg-gradient-to-br from-[#3A0066] to-[#1E1E2C] p-12 text-white">
@@ -18,8 +20,9 @@ const AuthGraphic: React.FC = () => (
 
 const RegistrationPage: React.FC = () => {
   const [step, setStep] = useState(1);
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -28,29 +31,41 @@ const RegistrationPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
   const navigate = useNavigate();
   const { register, isLoading, user } = useAuth();
+  const { addToast } = useToast();
+  
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendTimer > 0) {
+      timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendTimer]);
 
-  const validateStep1 = (): boolean => {
+  const validateEmail = (): boolean => {
     const newErrors: typeof errors = {};
     let isValid = true;
-
-    if (!name.trim()) { newErrors.name = 'Full Name is required.'; isValid = false; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) { newErrors.email = 'Email address is required.'; isValid = false; } 
     else if (!emailRegex.test(email)) { newErrors.email = 'Please enter a valid email address.'; isValid = false; }
-    if (!password) { newErrors.password = 'Password is required.'; isValid = false; } 
-    else if (password.length < 8) { newErrors.password = 'Password must be at least 8 characters long.'; isValid = false; }
-    if (password !== confirmPassword) { newErrors.confirmPassword = 'Passwords do not match.'; isValid = false; }
-    
     setErrors(newErrors);
     return isValid;
   };
-  
+
   const validateStep2 = (): boolean => {
     const newErrors: typeof errors = {};
     let isValid = true;
-    
+
+    if (!otp.trim() || otp.length !== 6) { newErrors.otp = 'Please enter the 6-digit code.'; isValid = false; }
+    if (!name.trim()) { newErrors.name = 'Full Name is required.'; isValid = false; }
+    if (!password) { newErrors.password = 'Password is required.'; isValid = false; } 
+    else if (password.length < 8) { newErrors.password = 'Password must be at least 8 characters long.'; isValid = false; }
+    if (password !== confirmPassword) { newErrors.confirmPassword = 'Passwords do not match.'; isValid = false; }
     if (!phone.trim()) { newErrors.phone = 'Phone number is required.'; isValid = false; }
     if (!address.trim()) { newErrors.address = 'Address is required.'; isValid = false; }
     if (!agreed) { newErrors.agreed = 'You must agree to the terms and conditions.'; isValid = false; }
@@ -59,25 +74,40 @@ const RegistrationPage: React.FC = () => {
     return isValid;
   }
 
-  const handleNext = (e: React.FormEvent) => {
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateStep1()) {
+    if (!validateEmail()) return;
+    setIsSendingOtp(true);
+    try {
+      await sendRegistrationOtp(email);
+      addToast('Verification code sent to your email!', 'success');
       setStep(2);
+      setResendTimer(60);
+    } catch (error: any) {
+      addToast(error.message || 'Failed to send code.', 'error');
+    } finally {
+      setIsSendingOtp(false);
     }
   };
   
-  const handleBack = () => {
-      setStep(1);
-      setErrors(prev => {
-        const { phone, address, agreed, ...rest } = prev;
-        return rest;
-    });
+  const handleResendCode = async () => {
+    if (resendTimer > 0) return;
+    setIsSendingOtp(true);
+    try {
+        await sendRegistrationOtp(email);
+        addToast('A new verification code has been sent.', 'success');
+        setResendTimer(60);
+    } catch (error: any) {
+        addToast(error.message || 'Failed to resend code.', 'error');
+    } finally {
+        setIsSendingOtp(false);
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateStep2()) {
-      await register(name, email, password, phone, address, companyName, gstNumber);
+      await register(name, email, password, phone, address, otp, companyName, gstNumber);
     }
   };
 
@@ -97,22 +127,43 @@ const RegistrationPage: React.FC = () => {
                         Create Your Account
                     </h2>
                      <p className="mt-2 text-center text-sm text-gray-400">
-                        Step {step} of 2: {step === 1 ? 'Account Details' : 'Contact Information'}
+                        Step {step} of 2: {step === 1 ? 'Verify Your Email' : 'Complete Your Profile'}
                     </p>
 
                      <div className="mt-4 w-full bg-gray-600 rounded-full h-1.5">
                         <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-500" style={{ width: step === 1 ? '50%' : '100%' }}></div>
                     </div>
 
-                    <form className="mt-8 space-y-4" onSubmit={step === 1 ? handleNext : handleSubmit}>
+                    <form className="mt-8 space-y-4" onSubmit={step === 1 ? handleSendCode : handleSubmit}>
                         {step === 1 && (
                             <>
+                                <Input id="email-address" name="email" type="email" required placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSendingOtp} icon={<Mail className="w-5 h-5 text-gray-400" />}/>
+                                {errors.email && <p className="text-red-400 text-xs">{errors.email}</p>}
+                                <div className="pt-4">
+                                    <Button type="submit" className="w-full justify-center" disabled={isSendingOtp}>
+                                        {isSendingOtp ? <Loader className="animate-spin h-5 w-5 mx-auto" /> : 'Send Verification Code'}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+
+                        {step === 2 && (
+                             <>
+                                <Input id="email-address" name="email" type="email" value={email} disabled icon={<Mail className="w-5 h-5 text-gray-400" />}/>
+                                
+                                <Input id="otp" name="otp" type="text" required placeholder="6-Digit Verification Code" value={otp} onChange={(e) => setOtp(e.target.value)} disabled={isLoading} icon={<KeyRound className="w-5 h-5 text-gray-400" />}/>
+                                {errors.otp && <p className="text-red-400 text-xs">{errors.otp}</p>}
+                                <div className="text-right text-sm">
+                                    <button type="button" onClick={handleResendCode} disabled={resendTimer > 0 || isSendingOtp} className="font-medium text-blue-500 hover:text-blue-400 disabled:text-gray-400 disabled:cursor-not-allowed">
+                                        {isSendingOtp ? 'Sending...' : resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
+                                    </button>
+                                </div>
+
+                                <hr className="border-gray-600 my-4" />
+
                                 <Input id="full-name" name="name" type="text" required placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} icon={<User className="w-5 h-5 text-gray-400" />}/>
                                 {errors.name && <p className="text-red-400 text-xs">{errors.name}</p>}
 
-                                <Input id="email-address" name="email" type="email" required placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} icon={<Mail className="w-5 h-5 text-gray-400" />}/>
-                                {errors.email && <p className="text-red-400 text-xs">{errors.email}</p>}
-                                
                                 <div>
                                     <Input id="password" name="password" type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} icon={<Lock className="w-5 h-5 text-gray-400" />}/>
                                     <PasswordStrengthMeter password={password} />
@@ -121,17 +172,7 @@ const RegistrationPage: React.FC = () => {
                                 
                                 <Input id="confirm-password" name="confirm-password" type="password" required placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} icon={<Lock className="w-5 h-5 text-gray-400" />}/>
                                 {errors.confirmPassword && <p className="text-red-400 text-xs">{errors.confirmPassword}</p>}
-
-                                <div className="pt-4">
-                                    <Button type="submit" className="w-full justify-center" disabled={isLoading}>
-                                        Next Step <ArrowRight size={18} className="ml-2" />
-                                    </Button>
-                                </div>
-                            </>
-                        )}
-
-                        {step === 2 && (
-                             <>
+                                
                                 <Input id="phone" name="phone" type="tel" required placeholder="Phone Number" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isLoading} icon={<Phone className="w-5 h-5 text-gray-400" />}/>
                                 {errors.phone && <p className="text-red-400 text-xs">{errors.phone}</p>}
 
@@ -155,7 +196,7 @@ const RegistrationPage: React.FC = () => {
                                 </div>
 
                                 <div className="flex justify-between items-center pt-4">
-                                    <Button type="button" variant="secondary" onClick={handleBack}>
+                                    <Button type="button" variant="secondary" onClick={() => setStep(1)}>
                                         Back
                                     </Button>
                                     <Button type="submit" className="justify-center" disabled={isLoading}>
