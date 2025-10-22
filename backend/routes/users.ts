@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { protect } from '../middleware/auth.js';
 import Service from '../models/Service.js';
 import Payment from '../models/Payment.js';
@@ -14,7 +14,7 @@ router.use(protect);
 
 // @desc    Get services for a specific user
 // @route   GET /api/users/:id/services
-router.get('/:id/services', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/:id/services', async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.user) {
             throw new ApiError(401, 'Not authorized');
@@ -32,7 +32,7 @@ router.get('/:id/services', async (req: express.Request, res: express.Response, 
 
 // @desc    Get payment history for a user
 // @route   GET /api/users/:id/payments
-router.get('/:id/payments', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/:id/payments', async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.user) {
             throw new ApiError(401, 'Not authorized');
@@ -57,7 +57,7 @@ router.get('/:id/payments', async (req: express.Request, res: express.Response, 
 
 // @desc    Update user profile
 // @route   PUT /api/users/profile
-router.put('/profile', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.put('/profile', async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.user) {
             throw new ApiError(401, 'Not authorized');
@@ -84,7 +84,7 @@ router.put('/profile', async (req: express.Request, res: express.Response, next:
 
 // @desc    Update user password
 // @route   PUT /api/users/profile/password
-router.put('/profile/password', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.put('/profile/password', async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.user) throw new ApiError(401, 'Not authorized');
 
@@ -107,7 +107,7 @@ router.put('/profile/password', async (req: express.Request, res: express.Respon
 
 // @desc    Generate 2FA secret
 // @route   POST /api/users/profile/2fa/generate
-router.post('/profile/2fa/generate', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/profile/2fa/generate', async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.user) throw new ApiError(401, 'Not authorized');
 
@@ -129,7 +129,7 @@ router.post('/profile/2fa/generate', async (req: express.Request, res: express.R
 
 // @desc    Enable 2FA
 // @route   POST /api/users/profile/2fa/enable
-router.post('/profile/2fa/enable', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/profile/2fa/enable', async (req: Request, res: Response, next: NextFunction) => {
     const { token } = req.body;
     try {
         if (!req.user) throw new ApiError(401, 'Not authorized');
@@ -162,7 +162,7 @@ router.post('/profile/2fa/enable', async (req: express.Request, res: express.Res
 
 // @desc    Disable 2FA
 // @route   POST /api/users/profile/2fa/disable
-router.post('/profile/2fa/disable', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/profile/2fa/disable', async (req: Request, res: Response, next: NextFunction) => {
     const { password, token } = req.body;
      try {
         if (!req.user) throw new ApiError(401, 'Not authorized');

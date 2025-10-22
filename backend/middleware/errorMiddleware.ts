@@ -1,12 +1,12 @@
-import express from 'express';
+import { Request, Response, NextFunction } from 'express';
 import ApiError from '../utils/ApiError.js';
 import logger from '../logger.js';
 
-const notFound = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const notFound = (req: Request, res: Response, next: NextFunction) => {
   next(new ApiError(404, `Not Found - ${req.originalUrl}`));
 };
 
-const errorHandler = (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
   // First, log the original technical error for debugging purposes
   logger.error({
     err: {

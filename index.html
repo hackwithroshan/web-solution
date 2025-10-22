@@ -111,6 +111,19 @@
       .animate-slide-in-up {
         animation: slide-in-up 0.3s ease-out forwards;
       }
+
+      /* New animation for typing dots */
+      @keyframes typing-bounce {
+        0%, 100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-5px);
+        }
+      }
+      .animate-typing-bounce {
+        animation: typing-bounce 1.4s infinite ease-in-out;
+      }
     </style>
 <script type="importmap">
 {
@@ -141,7 +154,8 @@
     "pino": "https://aistudiocdn.com/pino@^10.1.0",
     "qrcode": "https://aistudiocdn.com/qrcode@^1.5.4",
     "vite": "https://aistudiocdn.com/vite@^7.1.11",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.4"
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.4",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.25.0"
   }
 }
 </script>

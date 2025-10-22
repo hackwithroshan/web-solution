@@ -1,10 +1,13 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { protect, admin } from '../middleware/auth.js';
 import Ticket from '../models/Ticket.js';
 import Message from '../models/Message.js';
 import ApiError from '../utils/ApiError.js';
 import upload from '../middleware/upload.js';
+import User from '../models/User.js';
+import Notification from '../models/Notification.js';
+
 
 const router = express.Router();
 
@@ -15,7 +18,7 @@ router.use(protect);
 
 // @desc    Get the current user's tickets
 // @route   GET /api/tickets
-router.get('/', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.user) {
             throw new ApiError(401, "Not authorized");
@@ -29,7 +32,7 @@ router.get('/', async (req: express.Request, res: express.Response, next: expres
 
 // @desc    Create a new ticket
 // @route   POST /api/tickets
-router.post('/', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const { subject, message } = req.body;
     try {
         if (!req.user) {
@@ -57,6 +60,36 @@ router.post('/', async (req: express.Request, res: express.Response, next: expre
     }
 });
 
+// @desc    Request a callback
+// @route   POST /api/tickets/request-callback
+router.post('/request-callback', async (req: Request, res: Response, next: NextFunction) => {
+    const { phone, message } = req.body;
+    try {
+        if (!req.user) throw new ApiError(401, 'Not authorized');
+        if (!phone || !message) throw new ApiError(400, 'Phone and message are required.');
+
+        // Find all admins and support staff
+        const supportTeam = await User.find({ role: { $in: ['admin', 'support'] } });
+        if (supportTeam.length === 0) {
+            // Failsafe, shouldn't happen in a configured system
+            throw new ApiError(500, 'No support team members found to route the request.');
+        }
+
+        const notifications = supportTeam.map(teamMember => ({
+            user: teamMember._id,
+            type: 'support' as const,
+            title: `Callback Request from ${req.user!.name}`,
+            message: `User: ${req.user!.name} (${req.user!.email})\nPhone: ${phone}\nMessage: "${message}"`,
+        }));
+
+        await Notification.insertMany(notifications);
+
+        res.status(200).json({ message: "Callback request received. We will contact you shortly." });
+    } catch (error) {
+        next(error);
+    }
+});
+
 
 // --- ADMIN & SHARED ROUTES ---
 
@@ -68,7 +101,7 @@ router.post('/', async (req: express.Request, res: express.Response, next: expre
 
 // @desc    Get all tickets (admin)
 // @route   GET /api/tickets/all
-router.get('/all', admin, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/all', admin, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const tickets = await Ticket.aggregate([
             {
@@ -107,7 +140,7 @@ router.get('/all', admin, async (req: express.Request, res: express.Response, ne
 
 // @desc    Get a single ticket by ID (for admin or ticket owner)
 // @route   GET /api/tickets/:id
-router.get('/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             throw new ApiError(404, 'The requested resource could not be found. The ID may be incorrect.');
@@ -168,7 +201,7 @@ router.get('/:id', async (req: express.Request, res: express.Response, next: exp
 
 // @desc    Send a message in a ticket
 // @route   POST /api/tickets/:id/messages
-router.post('/:id/messages', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/:id/messages', async (req: Request, res: Response, next: NextFunction) => {
     const { text } = req.body;
     try {
         if (!req.user) {
@@ -198,7 +231,7 @@ router.post('/:id/messages', async (req: express.Request, res: express.Response,
 
 // @desc    Upload an attachment to a ticket
 // @route   POST /api/tickets/:id/upload
-router.post('/:id/upload', upload.single('attachment'), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/:id/upload', upload.single('attachment'), async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.file) throw new ApiError(400, 'Please upload a file');
         if (!req.user) {
@@ -231,7 +264,7 @@ router.post('/:id/upload', upload.single('attachment'), async (req: express.Requ
 
 // @desc    Update ticket status, assignment, priority (admin)
 // @route   PUT /api/tickets/:id
-router.put('/:id', admin, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.put('/:id', admin, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const ticket = await Ticket.findById(req.params.id);
         if (!ticket) throw new ApiError(404, 'Ticket not found');

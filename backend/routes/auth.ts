@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import User from '../models/User.js';
 import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
@@ -18,7 +18,7 @@ const generateToken = (id: any, expiresIn: string | number = '1d') => {
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
-router.post('/register', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
     const { name, email, password, phone, address, companyName, gstNumber } = req.body;
     try {
         const userExists = await User.findOne({ email });
@@ -48,7 +48,7 @@ router.post('/register', async (req: express.Request, res: express.Response, nex
 // @desc    Auth user & get token (Step 1)
 // @route   POST /api/auth/login
 // @access  Public
-router.post('/login', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
     try {
         const user = await User.findOne({ email });
@@ -72,7 +72,7 @@ router.post('/login', async (req: express.Request, res: express.Response, next: 
 // @desc    Verify 2FA code and complete login (Step 2)
 // @route   POST /api/auth/login/verify-2fa
 // @access  Public
-router.post('/login/verify-2fa', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/login/verify-2fa', async (req: Request, res: Response, next: NextFunction) => {
     const { token: twoFactorToken, code } = req.body;
     try {
         const secret = process.env.JWT_SECRET;
@@ -110,7 +110,7 @@ router.post('/login/verify-2fa', async (req: express.Request, res: express.Respo
 // @desc    Forgot password
 // @route   POST /api/auth/forgot-password
 // @access  Public
-router.post('/forgot-password', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/forgot-password', async (req: Request, res: Response, next: NextFunction) => {
     const { email } = req.body;
     try {
         const user = await User.findOne({ email });
@@ -131,7 +131,7 @@ router.post('/forgot-password', async (req: express.Request, res: express.Respon
 // @desc    Reset password
 // @route   POST /api/auth/reset-password/:token
 // @access  Public
-router.post('/reset-password/:token', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/reset-password/:token', async (req: Request, res: Response, next: NextFunction) => {
     const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
     try {
         const user = await User.findOne({

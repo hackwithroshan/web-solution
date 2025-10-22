@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, X } from 'lucide-react';
+import { HelpCircle, X } from 'lucide-react';
 import ChatWindow from './ChatWindow';
 
 const ChatWidget: React.FC = () => {
@@ -8,17 +8,25 @@ const ChatWidget: React.FC = () => {
   const toggleChat = () => setIsOpen(!isOpen);
 
   return (
-    // This container is full-screen but doesn't block clicks, allowing the
-    // button and window to be positioned within it.
     <div className="fixed inset-0 z-50 pointer-events-none">
       {isOpen && <ChatWindow onClose={toggleChat} />}
       <div className="absolute bottom-5 right-5 pointer-events-auto">
         <button
           onClick={toggleChat}
-          className="bg-green-600 text-white rounded-full p-4 shadow-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-          aria-label={isOpen ? "Close Chat" : "Open Chat"}
+          className="bg-gray-900 text-white rounded-full px-5 py-3 shadow-lg hover:bg-black transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:ring-offset-2 flex items-center gap-2"
+          aria-label={isOpen ? "Close Help Center" : "Open Help Center"}
         >
-          {isOpen ? <X size={28} /> : <MessageSquare size={28} />}
+          {isOpen ? (
+            <>
+              <X size={20} />
+              <span>Close</span>
+            </>
+          ) : (
+            <>
+              <HelpCircle size={20} />
+              <span>Help &amp; Support</span>
+            </>
+          )}
         </button>
       </div>
     </div>

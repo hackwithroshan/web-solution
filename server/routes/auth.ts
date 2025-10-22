@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import User from '../models/User';
 import jwt from 'jsonwebtoken';
 
@@ -7,7 +7,8 @@ const router = express.Router();
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
-router.post('/register', async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit Request and Response types to the route handler.
+router.post('/register', async (req: Request, res: Response) => {
     const { name, email, password, phone, address, companyName, gstNumber } = req.body;
     try {
         const userExists = await User.findOne({ email });
@@ -58,7 +59,8 @@ router.post('/register', async (req: express.Request, res: express.Response) => 
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
 // @access  Public
-router.post('/login', async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit Request and Response types to the route handler.
+router.post('/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     try {

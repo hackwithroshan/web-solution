@@ -23,7 +23,31 @@ export interface ChatMessage {
   sender: MessageSender;
   text: string;
   id: string;
+  timestamp: string; // Added for displaying message time
+  status?: 'sent' | 'delivered' | 'read'; // Added for message status indicators
 }
+
+// Live Chat
+export interface LiveChatRequest {
+    socketId: string;
+    user: {
+        _id: string;
+        name: string;
+    };
+    history: ChatMessage[];
+}
+
+export interface LiveChatSession {
+    id: string;
+    userSocketId: string;
+    adminSocketId: string;
+    user: {
+        _id: string;
+        name: string;
+    };
+    history: ChatMessage[];
+}
+
 
 // New types for dashboards
 export type UserRole = 'admin' | 'user' | 'support';

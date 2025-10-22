@@ -88,7 +88,7 @@ const importData = async () => {
     ]);
     
     const categoryMap = categories.reduce((map, category) => {
-        // Convert ObjectId to string to match the Record<string, string> type.
+        // FIX: Convert ObjectId to string to match the Record<string, string> type.
         map[category.name] = category._id.toString();
         return map;
     }, {} as Record<string, string>);

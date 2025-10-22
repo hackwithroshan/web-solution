@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { protect, admin } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Service from '../models/Service.js';
@@ -41,7 +41,7 @@ const processMonthlyData = (aggResult: any[], dataKey: 'count' | 'total') => {
 
 // @desc    Get admin dashboard stats
 // @route   GET /api/admin/stats
-router.get('/stats', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/stats', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -108,7 +108,7 @@ router.get('/stats', async (req: express.Request, res: express.Response, next: e
 
 // @desc    Get all users
 // @route   GET /api/admin/users
-router.get('/users', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/users', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const users = await User.find({}).select('-password').sort({ createdAt: -1 });
         res.json(users);
@@ -119,7 +119,7 @@ router.get('/users', async (req: express.Request, res: express.Response, next: e
 
 // @desc    Create a new user by admin
 // @route   POST /api/admin/users
-router.post('/users', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/users', async (req: Request, res: Response, next: NextFunction) => {
     const { name, email, password, role } = req.body;
     try {
         const userExists = await User.findOne({ email });
@@ -134,7 +134,7 @@ router.post('/users', async (req: express.Request, res: express.Response, next: 
 
 // @desc    Get user by ID
 // @route   GET /api/admin/users/:id
-router.get('/users/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = await User.findById(req.params.id).select('-password');
         if (!user) throw new ApiError(404, 'User not found');
@@ -146,7 +146,7 @@ router.get('/users/:id', async (req: express.Request, res: express.Response, nex
 
 // @desc    Update user
 // @route   PUT /api/admin/users/:id
-router.put('/users/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.put('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) throw new ApiError(404, 'User not found');
@@ -165,7 +165,7 @@ router.put('/users/:id', async (req: express.Request, res: express.Response, nex
 
 // @desc    Delete user
 // @route   DELETE /api/admin/users/:id
-router.delete('/users/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.delete('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) throw new ApiError(404, 'User not found');
@@ -181,7 +181,7 @@ router.delete('/users/:id', async (req: express.Request, res: express.Response, 
 
 // @desc    Get a user's services
 // @route   GET /api/admin/users/:id/services
-router.get('/users/:id/services', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/users/:id/services', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const services = await Service.find({ user: req.params.id });
         res.json(services);
@@ -192,7 +192,7 @@ router.get('/users/:id/services', async (req: express.Request, res: express.Resp
 
 // @desc    Add a service to a user
 // @route   POST /api/admin/users/:id/services
-router.post('/users/:id/services', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/users/:id/services', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) throw new ApiError(404, 'User not found');
@@ -206,7 +206,7 @@ router.post('/users/:id/services', async (req: express.Request, res: express.Res
 
 // @desc    Delete a user's service
 // @route   DELETE /api/admin/users/:userId/services/:serviceId
-router.delete('/users/:userId/services/:serviceId', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.delete('/users/:userId/services/:serviceId', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const service = await Service.findById(req.params.serviceId);
         if (!service) throw new ApiError(404, 'Service not found');
@@ -224,7 +224,7 @@ router.delete('/users/:userId/services/:serviceId', async (req: express.Request,
 
 // @desc    Get all services
 // @route   GET /api/admin/services
-router.get('/services', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/services', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const services = await Service.find({}).populate('user', 'name email').sort({ renewalDate: 1 });
         res.json(services);
@@ -235,7 +235,7 @@ router.get('/services', async (req: express.Request, res: express.Response, next
 
 // @desc    Get service by ID
 // @route   GET /api/admin/services/:id
-router.get('/services/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/services/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const service = await Service.findById(req.params.id).populate('user', 'name email');
         if (!service) throw new ApiError(404, 'Service not found');
@@ -247,7 +247,7 @@ router.get('/services/:id', async (req: express.Request, res: express.Response, 
 
 // @desc    Update service
 // @route   PUT /api/admin/services/:id
-router.put('/services/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.put('/services/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const service = await Service.findById(req.params.id);
         if (!service) throw new ApiError(404, 'Service not found');
@@ -266,7 +266,7 @@ router.put('/services/:id', async (req: express.Request, res: express.Response, 
 
 // @desc    Get all service plans (admin)
 // @route   GET /api/admin/service-plans
-router.get('/service-plans', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/service-plans', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const plans = await ServicePlan.find({}).populate('category').sort({ name: 1 });
         res.json(plans);
@@ -277,7 +277,7 @@ router.get('/service-plans', async (req: express.Request, res: express.Response,
 
 // @desc    Create service plan
 // @route   POST /api/admin/service-plans
-router.post('/service-plans', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/service-plans', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const plan = new ServicePlan(req.body);
         const createdPlan = await plan.save();
@@ -289,7 +289,7 @@ router.post('/service-plans', async (req: express.Request, res: express.Response
 
 // @desc    Update service plan
 // @route   PUT /api/admin/service-plans/:id
-router.put('/service-plans/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.put('/service-plans/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const plan = await ServicePlan.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!plan) throw new ApiError(404, 'Service plan not found');
@@ -301,7 +301,7 @@ router.put('/service-plans/:id', async (req: express.Request, res: express.Respo
 
 // @desc    Delete service plan
 // @route   DELETE /api/admin/service-plans/:id
-router.delete('/service-plans/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.delete('/service-plans/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const plan = await ServicePlan.findById(req.params.id);
         if (!plan) throw new ApiError(404, 'Service plan not found');
@@ -315,7 +315,7 @@ router.delete('/service-plans/:id', async (req: express.Request, res: express.Re
 
 // @desc    Get all categories (admin)
 // @route   GET /api/admin/categories
-router.get('/categories', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/categories', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const categories = await Category.find({}).sort({ name: 1 });
         res.json(categories);
@@ -326,7 +326,7 @@ router.get('/categories', async (req: express.Request, res: express.Response, ne
 
 // @desc    Create category
 // @route   POST /api/admin/categories
-router.post('/categories', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/categories', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const category = new Category({ name: req.body.name });
         const createdCategory = await category.save();
@@ -338,7 +338,7 @@ router.post('/categories', async (req: express.Request, res: express.Response, n
 
 // @desc    Update category
 // @route   PUT /api/admin/categories/:id
-router.put('/categories/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.put('/categories/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const category = await Category.findById(req.params.id);
         if (!category) throw new ApiError(404, 'Category not found');
@@ -352,7 +352,7 @@ router.put('/categories/:id', async (req: express.Request, res: express.Response
 
 // @desc    Delete category
 // @route   DELETE /api/admin/categories/:id
-router.delete('/categories/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.delete('/categories/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const category = await Category.findById(req.params.id);
         if (!category) throw new ApiError(404, 'Category not found');
@@ -371,7 +371,7 @@ router.delete('/categories/:id', async (req: express.Request, res: express.Respo
 
 // @desc Get support team members (admin or support role)
 // @route GET /api/admin/team
-router.get('/team', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/team', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const team = await User.find({ role: { $in: ['admin', 'support'] } }).select('name');
         res.json(team);
@@ -381,7 +381,7 @@ router.get('/team', async (req: express.Request, res: express.Response, next: ex
 });
 
 // --- Chatbot Knowledge Routes ---
-router.get('/chatbot/knowledge', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/chatbot/knowledge', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const knowledge = await ChatbotKnowledge.find({}).sort({ question: 1 });
         res.json(knowledge);
@@ -390,7 +390,7 @@ router.get('/chatbot/knowledge', async (req: express.Request, res: express.Respo
     }
 });
 
-router.post('/chatbot/knowledge', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/chatbot/knowledge', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const entry = new ChatbotKnowledge(req.body);
         const createdEntry = await entry.save();
@@ -400,7 +400,7 @@ router.post('/chatbot/knowledge', async (req: express.Request, res: express.Resp
     }
 });
 
-router.put('/chatbot/knowledge/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.put('/chatbot/knowledge/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const entry = await ChatbotKnowledge.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!entry) throw new ApiError(404, 'Knowledge entry not found');
@@ -410,7 +410,7 @@ router.put('/chatbot/knowledge/:id', async (req: express.Request, res: express.R
     }
 });
 
-router.delete('/chatbot/knowledge/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.delete('/chatbot/knowledge/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const entry = await ChatbotKnowledge.findByIdAndDelete(req.params.id);
         if (!entry) throw new ApiError(404, 'Knowledge entry not found');

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { protect, admin } from '../middleware/auth';
 import User from '../models/User';
 import Service from '../models/Service';
@@ -8,7 +8,8 @@ const router = express.Router();
 // @desc    Get admin dashboard stats
 // @route   GET /api/admin/stats
 // @access  Private/Admin
-router.get('/stats', protect, admin, async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit Request and Response types to the route handler.
+router.get('/stats', protect, admin, async (req: Request, res: Response) => {
     try {
         const totalUsers = await User.countDocuments({ role: 'user' });
         const activeServices = await Service.countDocuments({ status: 'active' });
@@ -30,7 +31,8 @@ router.get('/stats', protect, admin, async (req: express.Request, res: express.R
 // @desc    Get all users
 // @route   GET /api/admin/users
 // @access  Private/Admin
-router.get('/users', protect, admin, async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit Request and Response types to the route handler.
+router.get('/users', protect, admin, async (req: Request, res: Response) => {
     try {
         const users = await User.find({ role: 'user' }).select('-password').sort({ createdAt: -1 });
         res.json(users);

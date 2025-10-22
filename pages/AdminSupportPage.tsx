@@ -1,11 +1,14 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Ticket, TicketStatus, TicketPriority } from '../types';
+import { io, Socket } from 'socket.io-client';
+import { Ticket, TicketStatus, TicketPriority, LiveChatRequest, ChatMessage } from '../types';
 import { fetchAllTickets } from '../services/api';
 import AdminSidebar from '../components/AdminSidebar';
 import DashboardHeader from '../components/DashboardHeader';
 import { Search, Inbox, Edit, CheckSquare, XCircle } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import LiveChatInterface from '../components/LiveChatInterface';
+import Button from '../components/ui/Button';
 
 // --- Skeleton Components ---
 const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
@@ -69,6 +72,28 @@ const StatCard: React.FC<{ title: string; count: number; icon: React.ElementType
     </button>
 );
 
+const LiveChatQueue: React.FC<{ queue: LiveChatRequest[], onAccept: (socketId: string) => void }> = ({ queue, onAccept }) => {
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Live Chat Queue ({queue.length})</h2>
+            {queue.length > 0 ? (
+                <ul className="space-y-3">
+                    {queue.map(req => (
+                        <li key={req.socketId} className="p-3 border rounded-lg flex justify-between items-center bg-blue-50">
+                            <div>
+                                <p className="font-semibold">{req.user.name}</p>
+                                <p className="text-xs text-gray-500">Waiting for an agent...</p>
+                            </div>
+                            <Button onClick={() => onAccept(req.socketId)}>Accept Chat</Button>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-gray-500 text-center py-4">No users are currently waiting for a chat.</p>
+            )}
+        </div>
+    );
+};
 
 const AdminSupportPage: React.FC = () => {
     const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -81,8 +106,27 @@ const AdminSupportPage: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
     const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
     const [sortBy, setSortBy] = useState('updatedAt-desc');
+    
+    // --- New Live Chat State ---
+    const socketRef = useRef<Socket | null>(null);
+    const [liveChatQueue, setLiveChatQueue] = useState<LiveChatRequest[]>([]);
+    const [activeLiveSession, setActiveLiveSession] = useState<{ id: string, user: any, history: ChatMessage[] } | null>(null);
 
     useEffect(() => {
+        // Socket connection
+        const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
+        socketRef.current = io(socketUrl);
+        socketRef.current.emit('adminConnected');
+
+        socketRef.current.on('liveChatQueueUpdate', (queue: LiveChatRequest[]) => {
+            setLiveChatQueue(queue);
+        });
+        
+        socketRef.current.on('chatSessionStarted', (sessionData) => {
+            setActiveLiveSession(sessionData);
+        });
+
+        // Load tickets
         const loadTickets = async () => {
             setIsLoading(true);
             try {
@@ -94,8 +138,16 @@ const AdminSupportPage: React.FC = () => {
                 setIsLoading(false);
             }
         };
-        setTimeout(loadTickets, 1000); // Simulate network delay
+        setTimeout(loadTickets, 1000);
+
+        return () => {
+            socketRef.current?.disconnect();
+        };
     }, [addToast]);
+
+    const handleAcceptChat = (userSocketId: string) => {
+        socketRef.current?.emit('adminAcceptsChat', userSocketId);
+    };
 
     const ticketStats = useMemo(() => {
         return tickets.reduce((acc, ticket) => {
@@ -134,7 +186,7 @@ const AdminSupportPage: React.FC = () => {
         return filtered;
     }, [tickets, searchTerm, statusFilter, priorityFilter, sortBy]);
 
-    const renderContent = () => {
+    const renderTicketContent = () => {
         if (isLoading) {
             return (
                  <table className="min-w-full divide-y divide-gray-200">
@@ -194,6 +246,29 @@ const AdminSupportPage: React.FC = () => {
             </table>
         );
     }
+    
+    if (activeLiveSession) {
+        return (
+             <div className="flex h-screen bg-gray-100 font-sans">
+                <AdminSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+                <div className="relative flex-1 flex flex-col overflow-hidden lg:ml-64">
+                    <DashboardHeader onMenuClick={() => setIsSidebarOpen(true)} />
+                    <main className="flex-1 flex flex-col bg-slate-50 p-6 lg:p-8">
+                         <LiveChatInterface
+                            sessionId={activeLiveSession.id}
+                            initialHistory={activeLiveSession.history}
+                            socket={socketRef.current!}
+                            onEndChat={() => {
+                                setActiveLiveSession(null);
+                                addToast("Live chat ended.", "info");
+                            }}
+                            isAdmin
+                        />
+                    </main>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="flex h-screen bg-gray-100 font-sans">
@@ -203,8 +278,14 @@ const AdminSupportPage: React.FC = () => {
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-6 lg:p-8">
                     <div className="mb-6">
                         <h1 className="text-2xl font-bold text-gray-800">Support Dashboard</h1>
-                        <p className="mt-1 text-gray-600">Overview and management of all support tickets.</p>
+                        <p className="mt-1 text-gray-600">Overview and management of all support tickets and live chats.</p>
                     </div>
+
+                    <div className="mb-6">
+                        <LiveChatQueue queue={liveChatQueue} onAccept={handleAcceptChat} />
+                    </div>
+
+                    <h2 className="text-xl font-bold text-gray-800 mb-6">Support Tickets</h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         {isLoading ? <>
@@ -246,7 +327,7 @@ const AdminSupportPage: React.FC = () => {
                     </div>
 
                     <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
-                        {renderContent()}
+                        {renderTicketContent()}
                     </div>
                 </main>
             </div>
