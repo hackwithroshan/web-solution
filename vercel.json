@@ -16,6 +16,10 @@
   ],
   "routes": [
     {
+      "src": "/socket.io/(.*)",
+      "dest": "/backend/index.ts"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/backend/index.ts"
     },
@@ -24,7 +28,7 @@
       "dest": "/backend/index.ts"
     },
     {
-      "src": "/((?!api/|uploads/).*)",
+      "src": "/((?!api/|uploads/|socket.io/).*)",
       "dest": "/$1"
     }
   ]

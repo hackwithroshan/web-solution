@@ -8,6 +8,7 @@ import Payment from './models/Payment.js';
 import Notification from './models/Notification.js';
 import Announcement from './models/Announcement.js';
 // FIX: Import exit and argv from process to resolve typing issues.
+import process from 'process';
 import crypto from 'crypto';
 
 dotenv.config();

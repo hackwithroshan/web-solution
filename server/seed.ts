@@ -2,7 +2,8 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import User from './models/User';
 import Service from './models/Service';
-// FIX: Removed import of exit and argv from process to use globals.
+// FIX: Import process to provide types for global process object.
+import process from 'process';
 
 
 dotenv.config();

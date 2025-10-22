@@ -40,7 +40,8 @@ const RegistrationPage: React.FC = () => {
   const { addToast } = useToast();
   
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    // FIX: Replaced NodeJS.Timeout with a browser-compatible type `ReturnType<typeof setTimeout>` to resolve namespace error.
+    let timer: ReturnType<typeof setTimeout>;
     if (resendTimer > 0) {
       timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
     }
