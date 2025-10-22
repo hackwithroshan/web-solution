@@ -11,8 +11,12 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  // FIX: Use a class property initializer for state, which is modern syntax and avoids constructor boilerplate.
-  public state: State = { hasError: false };
+  // FIX: Using a constructor to initialize state and bind methods to ensure 'this' context is correctly handled, resolving type errors with 'this.setState' and 'this.props'.
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+    this.handleGoHome = this.handleGoHome.bind(this);
+  }
 
   public static getDerivedStateFromError(_: Error): State {
     // Update state so the next render will show the fallback UI.
@@ -24,8 +28,8 @@ class ErrorBoundary extends Component<Props, State> {
     console.error("Uncaught error:", error, errorInfo);
   }
   
-  // FIX: Use an arrow function for the method to automatically bind `this`. This resolves the error where `this.setState` was not found.
-  private handleGoHome = () => {
+  // FIX: Converted to a regular class method, as 'this' is now bound in the constructor.
+  private handleGoHome() {
     // Reset state and navigate to home
     this.setState({ hasError: false });
     window.location.hash = '/'; 

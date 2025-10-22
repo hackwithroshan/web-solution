@@ -10,6 +10,7 @@ import process from 'process';
 
 import logger from './logger.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
+import LiveChatSession from './models/LiveChatSession.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -56,16 +57,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin/announcements', announcementRoutes);
 app.use('/api/performance', performanceRoutes);
 
-// --- Live Chat State (In-memory, reset on server restart) ---
-interface LiveChatUser {
-    socketId: string;
-    user: { _id: string; name: string; };
-    history: any[];
-}
-const waitingUsers: LiveChatUser[] = [];
-const activeSessions: Record<string, { userSocketId: string; adminSocketId: string }> = {};
-const adminSockets = new Set<string>();
 
+// --- Live Chat State (Persistent) ---
+const adminSockets = new Set<string>();
 
 // Socket.IO Connection Handling
 io.on('connection', (socket) => {
@@ -80,109 +74,164 @@ io.on('connection', (socket) => {
     socket.to(ticketId).emit('newMessage', message);
   });
 
-  // --- Live Chat Logic ---
-  const emitQueueUpdate = () => {
-      adminSockets.forEach(adminSocketId => {
-          io.to(adminSocketId).emit('liveChatQueueUpdate', waitingUsers);
-      });
-  }
+  // --- Live Chat Logic (DB-backed) ---
+  const emitQueueUpdate = async () => {
+    try {
+        const queue = await LiveChatSession.find({ status: 'waiting' })
+            .select('user userSocketId')
+            .lean();
+        
+        const queueData = queue.map(session => ({
+            socketId: session.userSocketId,
+            user: { _id: session.user._id.toString(), name: session.user.name },
+            history: []
+        }));
+        
+        adminSockets.forEach(adminSocketId => {
+            io.to(adminSocketId).emit('liveChatQueueUpdate', queueData);
+        });
+    } catch (error) {
+        logger.error({ err: error }, "Failed to emit live chat queue update");
+    }
+  };
 
   socket.on('adminConnected', () => {
       logger.info(`Admin connected for live chat: ${socket.id}`);
       adminSockets.add(socket.id);
-      emitQueueUpdate(); // Send initial queue state
+      emitQueueUpdate();
   });
 
-  socket.on('requestLiveChat', ({ user, history }) => {
-      // Avoid duplicate requests
-      if (!waitingUsers.some(u => u.user._id === user._id)) {
-          logger.info(`User ${user.name} requesting live chat.`);
-          waitingUsers.push({ socketId: socket.id, user, history });
-          emitQueueUpdate();
-      }
-  });
-
-  socket.on('adminAcceptsChat', (userSocketId) => {
-      const userIndex = waitingUsers.findIndex(u => u.socketId === userSocketId);
-      if (userIndex === -1 || !adminSockets.has(socket.id)) {
-          return; // User no longer waiting or not a valid admin
-      }
-
-      const [userInfo] = waitingUsers.splice(userIndex, 1);
-      const sessionId = `${socket.id}-${userSocketId}`;
-      
-      activeSessions[sessionId] = { userSocketId: userInfo.socketId, adminSocketId: socket.id };
-
-      // Join both sockets to a room for this session
-      socket.join(sessionId);
-      io.sockets.sockets.get(userInfo.socketId)?.join(sessionId);
-
-      // Notify both parties that the chat has started
-      const sessionData = { id: sessionId, user: userInfo.user, history: userInfo.history };
-      io.to(socket.id).emit('chatSessionStarted', sessionData); // To admin
-      io.to(userInfo.socketId).emit('chatSessionStarted', sessionData); // To user
-
-      logger.info(`Admin ${socket.id} accepted chat with user ${userInfo.socketId}. Session: ${sessionId}`);
-      emitQueueUpdate(); // Update queue for other admins
-  });
-
-  socket.on('liveChatMessage', ({ sessionId, message }) => {
-      const session = activeSessions[sessionId];
-      if (session) {
-          // Send message to the other person in the room/session
-          socket.to(sessionId).emit('liveChatMessage', message);
-      }
-  });
-
-  // Typing indicator events
-  socket.on('startTyping', (sessionId) => {
-    const session = activeSessions[sessionId];
-    if (session) {
-      socket.to(sessionId).emit('isTyping');
+  socket.on('requestLiveChat', async ({ user, history }) => {
+    try {
+        const existingSession = await LiveChatSession.findOne({ 'user._id': user._id, status: 'waiting' });
+        if (existingSession) {
+            existingSession.userSocketId = socket.id;
+            await existingSession.save();
+            logger.info(`User ${user.name} reconnected to waiting queue.`);
+        } else {
+            logger.info(`User ${user.name} requesting live chat.`);
+            await LiveChatSession.create({
+                user: { _id: user._id, name: user.name },
+                userSocketId: socket.id,
+                history,
+                status: 'waiting',
+            });
+        }
+        await emitQueueUpdate();
+    } catch (error) {
+        logger.error({ err: error }, "Failed to handle live chat request");
     }
+  });
+
+  socket.on('adminAcceptsChat', async (userSocketId) => {
+    try {
+        if (!adminSockets.has(socket.id)) return;
+
+        const session = await LiveChatSession.findOneAndUpdate(
+            { userSocketId, status: 'waiting' },
+            { 
+                adminSocketId: socket.id,
+                status: 'active',
+            },
+            { new: true }
+        ).populate('user._id');
+
+        if (!session) {
+            logger.warn(`Admin ${socket.id} tried to accept a chat for user ${userSocketId} that is no longer available.`);
+            socket.emit('chatSessionEnded');
+            await emitQueueUpdate();
+            return;
+        }
+
+        const sessionId = session._id.toString();
+        
+        socket.join(sessionId);
+        io.sockets.sockets.get(userSocketId)?.join(sessionId);
+
+        const sessionData = {
+            id: sessionId,
+            user: session.user,
+            history: session.history
+        };
+        
+        io.to(socket.id).emit('chatSessionStarted', sessionData);
+        io.to(userSocketId).emit('chatSessionStarted', sessionData);
+        
+        logger.info(`Admin ${socket.id} accepted chat with user ${userSocketId}. Session: ${sessionId}`);
+        await emitQueueUpdate();
+    } catch (error) {
+        logger.error({ err: error }, "Failed to handle admin accepting chat");
+    }
+  });
+
+  socket.on('liveChatMessage', async ({ sessionId, message }) => {
+    try {
+        const session = await LiveChatSession.findByIdAndUpdate(
+            sessionId,
+            { $push: { history: message as any } },
+            { new: true }
+        );
+
+        if (session && session.status === 'active') {
+            socket.to(sessionId).emit('liveChatMessage', message);
+        }
+    } catch (error) {
+        logger.error({ err: error }, "Failed to process live chat message");
+    }
+  });
+
+  socket.on('startTyping', (sessionId) => {
+    socket.to(sessionId).emit('isTyping');
   });
 
   socket.on('stopTyping', (sessionId) => {
-    const session = activeSessions[sessionId];
-    if (session) {
-      socket.to(sessionId).emit('hasStoppedTyping');
-    }
+    socket.to(sessionId).emit('hasStoppedTyping');
   });
   
-  socket.on('endLiveChat', (sessionId) => {
-      const session = activeSessions[sessionId];
-      if (session) {
-          io.to(sessionId).emit('chatSessionEnded');
-          io.sockets.sockets.get(session.userSocketId)?.leave(sessionId);
-          io.sockets.sockets.get(session.adminSocketId)?.leave(sessionId);
-          delete activeSessions[sessionId];
-          logger.info(`Session ${sessionId} ended.`);
-      }
+  socket.on('endLiveChat', async (sessionId) => {
+    try {
+        const session = await LiveChatSession.findByIdAndUpdate(sessionId, { status: 'closed' });
+        if (session) {
+            io.to(sessionId).emit('chatSessionEnded');
+            io.sockets.sockets.get(session.userSocketId)?.leave(sessionId);
+            if(session.adminSocketId) {
+                io.sockets.sockets.get(session.adminSocketId)?.leave(sessionId);
+            }
+            logger.info(`Session ${sessionId} ended by a user.`);
+        }
+    } catch (error) {
+        logger.error({ err: error }, "Failed to end live chat session");
+    }
   });
 
-
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     logger.info(`Socket disconnected: ${socket.id}`);
     
-    // Live Chat Cleanup
     if (adminSockets.has(socket.id)) {
         adminSockets.delete(socket.id);
-    } else {
-        const userIndex = waitingUsers.findIndex(u => u.socketId === socket.id);
-        if (userIndex !== -1) {
-            waitingUsers.splice(userIndex, 1);
-            emitQueueUpdate();
-        }
     }
-    // Also need to handle disconnections from active sessions...
-    for (const sessionId in activeSessions) {
-        const session = activeSessions[sessionId];
-        if (session.userSocketId === socket.id || session.adminSocketId === socket.id) {
-            io.to(sessionId).emit('hasStoppedTyping'); // Clear typing indicator for the other user
-            io.to(sessionId).emit('chatSessionEnded'); // Notify other user
-            delete activeSessions[sessionId];
-             logger.info(`Session ${sessionId} ended due to disconnect.`);
+
+    try {
+        const session = await LiveChatSession.findOneAndUpdate(
+            { 
+                status: { $in: ['waiting', 'active'] },
+                $or: [{ userSocketId: socket.id }, { adminSocketId: socket.id }]
+            },
+            { status: 'closed' },
+            { new: true }
+        );
+
+        if (session) {
+            const sessionId = session._id.toString();
+            const otherSocketId = session.userSocketId === socket.id ? session.adminSocketId : session.userSocketId;
+            if (otherSocketId) {
+                io.to(otherSocketId).emit('chatSessionEnded');
+            }
+            logger.info(`Session ${sessionId} closed due to disconnect of ${socket.id}.`);
+            await emitQueueUpdate();
         }
+    } catch (error) {
+        logger.error({ err: error }, `Error during disconnect cleanup for socket ${socket.id}`);
     }
   });
 });
