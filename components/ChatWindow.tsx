@@ -45,44 +45,35 @@ const HomeView: React.FC<{
 );
 
 const ContactView: React.FC<{
-  liveChatStatus: 'waiting' | 'idle' | 'active';
   onRequestLiveChat: () => void;
   onCallbackClick: () => void;
   onTicketClick: () => void;
-}> = ({ liveChatStatus, onRequestLiveChat, onCallbackClick, onTicketClick }) => (
+}> = ({ onRequestLiveChat, onCallbackClick, onTicketClick }) => (
     <div className="p-5 flex flex-col justify-center h-full">
-        {liveChatStatus === 'waiting' ? (
-            <div className="text-center p-8">
-                <Loader className="animate-spin mx-auto text-blue-600 mb-4 h-8 w-8" />
-                <p className="font-semibold text-gray-800">Connecting you to an agent...</p>
-                <p className="text-sm text-gray-500 mt-1">Please wait a moment.</p>
-            </div>
-        ) : (
-            <div className="space-y-3 text-center">
-                <p className="text-gray-600 mb-4">How would you like to get in touch?</p>
-                <button onClick={onRequestLiveChat} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 transition text-left">
-                    <Headset className="text-blue-600 text-xl flex-shrink-0" />
-                    <div>
-                        <p className="font-medium text-gray-800">Live Chat</p>
-                        <p className="text-xs text-gray-500">Available 10 AM - 10 PM</p>
-                    </div>
-                </button>
-                <button onClick={onCallbackClick} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 transition text-left">
-                    <Phone className="text-green-600 text-xl flex-shrink-0" />
-                    <div>
-                        <p className="font-medium text-gray-800">Request a Callback</p>
-                        <p className="text-xs text-gray-500">We’ll contact you soon</p>
-                    </div>
-                </button>
-                <button onClick={onTicketClick} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 transition text-left">
-                    <MessageSquare className="text-purple-600 text-xl flex-shrink-0" />
-                    <div>
-                        <p className="font-medium text-gray-800">Create a Support Ticket</p>
-                        <p className="text-xs text-gray-500">Get assistance for your issue</p>
-                    </div>
-                </button>
-            </div>
-        )}
+        <div className="space-y-3 text-center">
+            <p className="text-gray-600 mb-4">How would you like to get in touch?</p>
+            <button onClick={onRequestLiveChat} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 transition text-left">
+                <Headset className="text-blue-600 text-xl flex-shrink-0" />
+                <div>
+                    <p className="font-medium text-gray-800">Live Chat</p>
+                    <p className="text-xs text-gray-500">Available 10 AM - 10 PM</p>
+                </div>
+            </button>
+            <button onClick={onCallbackClick} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 transition text-left">
+                <Phone className="text-green-600 text-xl flex-shrink-0" />
+                <div>
+                    <p className="font-medium text-gray-800">Request a Callback</p>
+                    <p className="text-xs text-gray-500">We’ll contact you soon</p>
+                </div>
+            </button>
+            <button onClick={onTicketClick} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 transition text-left">
+                <MessageSquare className="text-purple-600 text-xl flex-shrink-0" />
+                <div>
+                    <p className="font-medium text-gray-800">Create a Support Ticket</p>
+                    <p className="text-xs text-gray-500">Get assistance for your issue</p>
+                </div>
+            </button>
+        </div>
     </div>
 );
   
@@ -196,12 +187,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
   const { addToast } = useToast();
   const { user } = useAuth();
   
-  // Live Chat State
   const socketRef = useRef<Socket | null>(null);
-  const [liveChatStatus, setLiveChatStatus] = useState<'idle' | 'waiting' | 'active'>('idle');
   const [activeLiveSession, setActiveLiveSession] = useState<{ id: string, user: any, history: ChatMessage[] } | null>(null);
 
-  // Form states
   const [callbackData, setCallbackData] = useState({ phone: user?.phone || '', message: '' });
   const [newTicketData, setNewTicketData] = useState({ subject: '', message: '' });
 
@@ -235,25 +223,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
     socketRef.current = io(socketUrl);
     socketRef.current.on('connect', () => {});
     
-    socketRef.current.on('chatSessionStarted', (sessionData) => {
-      const systemMessage: ChatMessage = {
-          id: `system-join-${uuidv4()}`,
-          sender: MessageSender.BOT,
-          text: "An agent has joined the chat. You are now connected.",
-          timestamp: new Date().toISOString()
-      };
-      const updatedSessionData = {
-          ...sessionData,
-          history: [...sessionData.history, systemMessage]
-      };
-      setActiveLiveSession(updatedSessionData);
-      setLiveChatStatus('active');
-      setView('live_chat');
-    });
-
     socketRef.current.on('chatSessionEnded', () => {
         addToast("The live chat session has ended.", "info");
-        setLiveChatStatus('idle');
         setActiveLiveSession(null);
         setView('home');
     });
@@ -332,8 +303,23 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
 
   const handleRequestLiveChat = useCallback(() => {
     if (socketRef.current && user) {
-      socketRef.current.emit('requestLiveChat', { user: { _id: user._id, name: user.name }, history: messages });
-      setLiveChatStatus('waiting');
+        socketRef.current.emit('requestLiveChat', { user: { _id: user._id, name: user.name }, history: messages }, (sessionData: any) => {
+            if (sessionData) {
+                const initialSystemMessage: ChatMessage = {
+                    id: `system-initial-${Date.now()}`,
+                    sender: MessageSender.BOT,
+                    text: "You've been connected for live chat. An agent will be with you shortly.",
+                    timestamp: new Date().toISOString()
+                };
+                setActiveLiveSession({
+                    ...sessionData,
+                    history: [...sessionData.history, initialSystemMessage]
+                });
+                setView('live_chat');
+            } else {
+                addToast('Could not start a live chat session. Please try again.', 'error');
+            }
+        });
     } else {
         addToast('Could not connect to live chat. Please refresh and try again.', 'error');
     }
@@ -341,7 +327,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
 
   const handleBack = useCallback(() => {
       if (view === 'live_chat') return;
-      setLiveChatStatus('idle');
       setView('home');
   }, [view]);
 
@@ -362,13 +347,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
     switch(view) {
         case 'home': return <HomeView faqs={faqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} />;
         case 'chat': return <ChatView messages={messages} input={input} onInputChange={handleChatInputChange} onKeyDown={handleChatInputKeyDown} onSubmit={handleSend} isLoading={isLoading} textareaRef={textareaRef} messagesEndRef={messagesEndRef} />;
-        case 'contact': return <ContactView liveChatStatus={liveChatStatus} onRequestLiveChat={handleRequestLiveChat} onCallbackClick={() => setView('callback')} onTicketClick={() => setView('ticket')} />;
+        case 'contact': return <ContactView onRequestLiveChat={handleRequestLiveChat} onCallbackClick={() => setView('callback')} onTicketClick={() => setView('ticket')} />;
         case 'callback': return <CallbackView callbackData={callbackData} onFormChange={handleCallbackFormChange} onSubmit={handleCallbackSubmit} isLoading={isLoading} />;
         case 'ticket': return <TicketView newTicketData={newTicketData} onFormChange={handleTicketFormChange} onSubmit={handleTicketSubmit} isLoading={isLoading} />;
         case 'live_chat': 
             if (!activeLiveSession || !socketRef.current) {
                 setView('home');
-                setLiveChatStatus('idle');
                 addToast('Live chat session ended unexpectedly.', 'error');
                 return null;
             }
@@ -380,7 +364,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
                     socket={socketRef.current}
                     onEndChat={() => {
                         setActiveLiveSession(null);
-                        setLiveChatStatus('idle');
                         setView('home');
                     }}
                 />

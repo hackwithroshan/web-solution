@@ -93,6 +93,7 @@ export const deleteUser = (userId: string): Promise<{ message: string }> => apiF
 export const adminFetchUserServices = (userId: string): Promise<UserService[]> => apiFetch(`/api/admin/users/${userId}/services`);
 export const adminAddServiceToUser = (userId: string, serviceData: object): Promise<UserService> => apiFetch(`/api/admin/users/${userId}/services`, { method: 'POST', body: JSON.stringify(serviceData) });
 export const adminDeleteUserService = (userId: string, serviceId: string): Promise<{ message: string }> => apiFetch(`/api/admin/users/${userId}/services/${serviceId}`, { method: 'DELETE' });
+export const fetchAdminLiveChats = (): Promise<any[]> => apiFetch('/api/admin/live-chats');
 
 // Admin Service & Plan Management
 export const fetchAdminServicePlans = (): Promise<ServicePlan[]> => apiFetch('/api/admin/service-plans');

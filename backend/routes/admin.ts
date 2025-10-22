@@ -8,6 +8,7 @@ import ServicePlan from '../models/ServicePlan.js';
 import Category from '../models/Category.js';
 import ApiError from '../utils/ApiError.js';
 import ChatbotKnowledge from '../models/ChatbotKnowledge.js';
+import LiveChatSession from '../models/LiveChatSession.js';
 
 const router = express.Router();
 
@@ -105,6 +106,20 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
         next(error);
     }
 });
+
+// @desc    Get active live chat sessions
+// @route   GET /api/admin/live-chats
+router.get('/live-chats', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const chats = await LiveChatSession.find({ status: 'active' })
+            .select('user createdAt adminSocketId')
+            .sort({ createdAt: 1 });
+        res.json(chats);
+    } catch (error) {
+        next(error);
+    }
+});
+
 
 // @desc    Get all users
 // @route   GET /api/admin/users

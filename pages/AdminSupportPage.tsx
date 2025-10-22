@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import { Ticket, TicketStatus, TicketPriority, LiveChatRequest, ChatMessage, MessageSender } from '../types';
-import { fetchAllTickets } from '../services/api';
+import { fetchAllTickets, fetchAdminLiveChats } from '../services/api';
 import AdminSidebar from '../components/AdminSidebar';
 import DashboardHeader from '../components/DashboardHeader';
 import { Search, Inbox, Edit, CheckSquare, XCircle } from 'lucide-react';
@@ -72,24 +72,50 @@ const StatCard: React.FC<{ title: string; count: number; icon: React.ElementType
     </button>
 );
 
-const LiveChatQueue: React.FC<{ queue: LiveChatRequest[], onAccept: (socketId: string) => void }> = ({ queue, onAccept }) => {
+const LiveChatList: React.FC<{ chats: any[], onJoin: (sessionId: string) => void }> = ({ chats, onJoin }) => {
+    const unassignedChats = chats.filter(c => !c.adminSocketId);
+    const assignedChats = chats.filter(c => c.adminSocketId);
+
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Live Chat Queue ({queue.length})</h2>
-            {queue.length > 0 ? (
-                <ul className="space-y-3">
-                    {queue.map(req => (
-                        <li key={req.socketId} className="p-3 border rounded-lg flex justify-between items-center bg-blue-50">
-                            <div>
-                                <p className="font-semibold">{req.user.name}</p>
-                                <p className="text-xs text-gray-500">Waiting for an agent...</p>
-                            </div>
-                            <Button onClick={() => onAccept(req.socketId)}>Accept Chat</Button>
-                        </li>
-                    ))}
-                </ul>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Active Chats ({unassignedChats.length} waiting)</h2>
+            {chats.length > 0 ? (
+                <div className="space-y-4">
+                    {unassignedChats.length > 0 && 
+                        <div>
+                            <h3 className="text-sm font-semibold text-gray-500 mb-2">Waiting for Agent</h3>
+                            <ul className="space-y-3">
+                                {unassignedChats.map(chat => (
+                                    <li key={chat._id} className="p-3 border rounded-lg flex justify-between items-center bg-blue-50">
+                                        <div>
+                                            <p className="font-semibold">{chat.user.name}</p>
+                                            <p className="text-xs text-gray-500">Waiting since {new Date(chat.createdAt).toLocaleTimeString()}</p>
+                                        </div>
+                                        <Button onClick={() => onJoin(chat._id)}>Join Chat</Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    }
+                    {assignedChats.length > 0 && 
+                        <div>
+                             <h3 className="text-sm font-semibold text-gray-500 mb-2 mt-4">In Progress</h3>
+                             <ul className="space-y-3">
+                                {assignedChats.map(chat => (
+                                    <li key={chat._id} className="p-3 border rounded-lg flex justify-between items-center bg-gray-50">
+                                        <div>
+                                            <p className="font-semibold">{chat.user.name}</p>
+                                            <p className="text-xs text-gray-500">Chat in progress</p>
+                                        </div>
+                                        <Button variant="secondary" disabled>Joined</Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    }
+                </div>
             ) : (
-                <p className="text-gray-500 text-center py-4">No users are currently waiting for a chat.</p>
+                <p className="text-gray-500 text-center py-4">There are no active chats.</p>
             )}
         </div>
     );
@@ -101,31 +127,23 @@ const AdminSupportPage: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { addToast } = useToast();
     
-    // Filtering and sorting state
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
     const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
     const [sortBy, setSortBy] = useState('updatedAt-desc');
     
-    // --- New Live Chat State ---
     const socketRef = useRef<Socket | null>(null);
-    const [liveChatQueue, setLiveChatQueue] = useState<LiveChatRequest[]>([]);
+    const [activeChats, setActiveChats] = useState<any[]>([]);
     const [activeLiveSession, setActiveLiveSession] = useState<{ id: string, user: any, history: ChatMessage[] } | null>(null);
 
     useEffect(() => {
-        // Socket connection
         const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
         socketRef.current = io(socketUrl);
-        socketRef.current.emit('adminConnected');
-
-        socketRef.current.on('liveChatQueueUpdate', (queue: LiveChatRequest[]) => {
-            setLiveChatQueue(queue);
-        });
         
         socketRef.current.on('chatSessionStarted', (sessionData) => {
             const systemMessage: ChatMessage = {
                 id: `system-join-${Date.now()}`,
-                sender: MessageSender.BOT, // System messages can be from BOT
+                sender: MessageSender.BOT,
                 text: `You are now connected with ${sessionData.user.name}. The user's previous chat history is below.`,
                 timestamp: new Date().toISOString(),
             };
@@ -135,7 +153,6 @@ const AdminSupportPage: React.FC = () => {
             });
         });
 
-        // Load tickets
         const loadTickets = async () => {
             setIsLoading(true);
             try {
@@ -147,15 +164,28 @@ const AdminSupportPage: React.FC = () => {
                 setIsLoading(false);
             }
         };
-        setTimeout(loadTickets, 1000);
+
+        const loadActiveChats = async () => {
+            try {
+                const chats = await fetchAdminLiveChats();
+                setActiveChats(chats);
+            } catch (err) {
+                console.error("Failed to fetch active chats", err);
+            }
+        };
+        
+        loadTickets();
+        loadActiveChats();
+        const chatPollInterval = setInterval(loadActiveChats, 5000);
 
         return () => {
             socketRef.current?.disconnect();
+            clearInterval(chatPollInterval);
         };
     }, [addToast]);
 
-    const handleAcceptChat = (userSocketId: string) => {
-        socketRef.current?.emit('adminAcceptsChat', userSocketId);
+    const handleJoinChat = (sessionId: string) => {
+        socketRef.current?.emit('adminJoinsChat', sessionId);
     };
 
     const ticketStats = useMemo(() => {
@@ -291,7 +321,7 @@ const AdminSupportPage: React.FC = () => {
                     </div>
 
                     <div className="mb-6">
-                        <LiveChatQueue queue={liveChatQueue} onAccept={handleAcceptChat} />
+                        <LiveChatList chats={activeChats} onJoin={handleJoinChat} />
                     </div>
 
                     <h2 className="text-xl font-bold text-gray-800 mb-6">Support Tickets</h2>
