@@ -50,4 +50,4 @@ const Input: React.FC<InputProps> = ({ icon, type, label, variant = 'dark', clas
   );
 };
 
-export default Input;
+export default React.memo(Input);

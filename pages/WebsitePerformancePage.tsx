@@ -3,6 +3,7 @@ import { useScrollAnimation } from '../hooks/useScrollAnimation';
 import { analyzeWebsitePerformance } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { Search, Loader, Zap, AlertTriangle, ChevronsRight, Timer, Smartphone, HardDrive, BarChart, ExternalLink } from 'lucide-react';
+import SeoMeta from '../components/SeoMeta';
 
 // --- Helper Functions & Components ---
 
@@ -110,7 +111,7 @@ const ResultDisplay: React.FC<{ results: any }> = ({ results }) => {
                 </div>
             </div>
              <div className="text-center mt-8">
-                 <a href={results.fullReportUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-blue-600 text-white font-bold px-6 py-3 rounded-md hover:bg-blue-700 transition-colors">
+                 <a href={results.fullReportUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-6 py-3 rounded-full hover:from-blue-700 hover:to-purple-700 transition-colors shadow-lg">
                      View Full Report on PageSpeed Insights <ExternalLink size={18} />
                  </a>
             </div>
@@ -157,58 +158,64 @@ const WebsitePerformancePage: React.FC = () => {
     };
     
     return (
-        <div className="bg-gray-50 text-gray-800">
-            {/* Hero Section */}
-            <section className="bg-white pt-20 pb-16">
-                <div className="container mx-auto px-6 text-center">
-                    <div className="flex justify-center mb-4">
-                        <Zap className="w-16 h-16 text-blue-500" />
+        <>
+            <SeoMeta
+                title="Free Website Speed Test - ApexNucleus"
+                description="Analyze your page speed and see how to improve performance with our free Website Speed Test tool, powered by Google PageSpeed Insights."
+            />
+            <div className="bg-gray-50 text-gray-800">
+                {/* Hero Section */}
+                <section className="bg-white pt-20 pb-16">
+                    <div className="container mx-auto px-6 text-center">
+                        <div className="flex justify-center mb-4">
+                            <Zap className="w-16 h-16 text-blue-500" />
+                        </div>
+                        <h1 className="text-4xl md:text-5xl font-extrabold scroll-animate slide-up">Website Speed Test</h1>
+                        <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto scroll-animate slide-up delay-100">
+                            Enter a URL to analyze your page speed and see how to improve performance with real-world data.
+                        </p>
+                        <form onSubmit={handleSubmit} className="mt-8 max-w-2xl mx-auto flex flex-col sm:flex-row gap-3 scroll-animate scale-up delay-200">
+                            <div className="relative flex-grow">
+                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                                 <input
+                                    type="text"
+                                    value={url}
+                                    onChange={(e) => setUrl(e.target.value)}
+                                    placeholder="Enter a web page URL (e.g., example.com)"
+                                    className="w-full pl-12 pr-4 py-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
+                                    required
+                                    disabled={isLoading}
+                                 />
+                            </div>
+                            <button type="submit" disabled={isLoading} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-8 py-4 rounded-full hover:from-blue-700 hover:to-purple-700 transition-colors disabled:from-blue-400 disabled:to-purple-400 flex items-center justify-center shadow-lg">
+                               {isLoading ? <Loader className="animate-spin h-6 w-6" /> : 'Analyze'}
+                            </button>
+                        </form>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-extrabold scroll-animate slide-up">Website Speed Test</h1>
-                    <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto scroll-animate slide-up delay-100">
-                        Enter a URL to analyze your page speed and see how to improve performance with real-world data.
-                    </p>
-                    <form onSubmit={handleSubmit} className="mt-8 max-w-2xl mx-auto flex flex-col sm:flex-row gap-3 scroll-animate scale-up delay-200">
-                        <div className="relative flex-grow">
-                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                             <input
-                                type="text"
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                placeholder="Enter a web page URL (e.g., example.com)"
-                                className="w-full pl-12 pr-4 py-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
-                                required
-                                disabled={isLoading}
-                             />
-                        </div>
-                        <button type="submit" disabled={isLoading} className="bg-blue-600 text-white font-bold px-8 py-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400 flex items-center justify-center">
-                           {isLoading ? <Loader className="animate-spin h-6 w-6" /> : 'Analyze'}
-                        </button>
-                    </form>
-                </div>
-            </section>
-            
-            {/* Results Section */}
-            <section className="py-16">
-                <div className="container mx-auto px-6">
-                    {isLoading && (
-                        <div className="text-center">
-                            <Loader className="w-12 h-12 animate-spin mx-auto text-blue-500 mb-4" />
-                            <h2 className="text-2xl font-bold">Analyzing your website...</h2>
-                            <p className="text-gray-500">This may take a moment. We're running a full audit.</p>
-                        </div>
-                    )}
-                    {error && (
-                        <div className="max-w-2xl mx-auto bg-red-50 p-6 rounded-lg border border-red-200 text-center">
-                            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                            <h2 className="text-xl font-bold text-red-800">Analysis Failed</h2>
-                            <p className="text-red-700 mt-2">{error}</p>
-                        </div>
-                    )}
-                    {results && <ResultDisplay results={results} />}
-                </div>
-            </section>
-        </div>
+                </section>
+                
+                {/* Results Section */}
+                <section className="py-16">
+                    <div className="container mx-auto px-6">
+                        {isLoading && (
+                            <div className="text-center">
+                                <Loader className="w-12 h-12 animate-spin mx-auto text-blue-500 mb-4" />
+                                <h2 className="text-2xl font-bold">Analyzing your website...</h2>
+                                <p className="text-gray-500">This may take a moment. We're running a full audit.</p>
+                            </div>
+                        )}
+                        {error && (
+                            <div className="max-w-2xl mx-auto bg-red-50 p-6 rounded-lg border border-red-200 text-center">
+                                <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                                <h2 className="text-xl font-bold text-red-800">Analysis Failed</h2>
+                                <p className="text-red-700 mt-2">{error}</p>
+                            </div>
+                        )}
+                        {results && <ResultDisplay results={results} />}
+                    </div>
+                </section>
+            </div>
+        </>
     );
 };
 

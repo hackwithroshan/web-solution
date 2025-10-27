@@ -6,7 +6,7 @@ export const NAV_LINKS = [
   { name: 'Home', path: '/' },
   { name: 'Services', path: '/services' },
   { name: 'Pricing', path: '/pricing' },
-  { name: 'Website Analyzer', path: '/website-analyzer' },
+  { name: 'Contact', path: '/contact' },
 ];
 
 export const SERVICES_DATA: Service[] = [

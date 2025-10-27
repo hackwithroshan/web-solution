@@ -33,7 +33,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ isOpen, setIsOpen }) => {
             
             <aside className={`fixed inset-y-0 left-0 w-64 flex-shrink-0 bg-white border-r flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="h-20 flex items-center px-6 border-b">
-                    <img src="https://res.cloudinary.com/dvrqft9ov/image/upload/v1760926012/Untitled_design_3_kkkf6d.png" alt="ApexNucleus Logo" className="h-8 w-auto" />
+                    <img src="https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_200/v1760926012/Untitled_design_3_kkkf6d.png" alt="ApexNucleus Logo" className="h-8 w-auto" loading="lazy" decoding="async" />
                 </div>
                 <nav className="flex-1 px-4 py-4">
                     {navLinks.map(link => (
@@ -66,4 +66,4 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ isOpen, setIsOpen }) => {
     );
 };
 
-export default UserSidebar;
+export default React.memo(UserSidebar);

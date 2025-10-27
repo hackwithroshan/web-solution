@@ -9,7 +9,7 @@ declare global {
   namespace Express {
     // FIX: Removed 'export' from interface declaration, as it's invalid syntax for module augmentation inside `declare global`.
     interface Request {
-      user?: IUser & mongoose.Document;
+      user?: IUser;
       file?: Multer.File;
     }
   }

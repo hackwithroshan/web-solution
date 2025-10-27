@@ -230,3 +230,32 @@ export interface Announcement {
   };
   createdAt: string;
 }
+
+// Type for Page Management
+export interface Page {
+    _id: string;
+    title: string;
+    slug: string;
+    content: string;
+    status: 'published' | 'draft';
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Type for Blog Management
+export interface BlogPost {
+    _id: string;
+    title: string;
+    slug: string;
+    content: string;
+    author: {
+        _id: string;
+        name: string;
+    };
+    category: string;
+    tags: string[];
+    featuredImage?: string;
+    status: 'published' | 'draft';
+    createdAt: string;
+    updatedAt: string;
+}

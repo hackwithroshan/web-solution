@@ -9,6 +9,7 @@ import { Search, Inbox, Edit, CheckSquare, XCircle } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import LiveChatInterface from '../components/LiveChatInterface';
 import Button from '../components/ui/Button';
+import { useAuth } from '../hooks/useAuth';
 
 // --- Skeleton Components ---
 const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
@@ -122,6 +123,7 @@ const LiveChatList: React.FC<{ chats: any[], onJoin: (sessionId: string) => void
 };
 
 const AdminSupportPage: React.FC = () => {
+    const { user: adminUser } = useAuth();
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -135,22 +137,14 @@ const AdminSupportPage: React.FC = () => {
     const socketRef = useRef<Socket | null>(null);
     const [activeChats, setActiveChats] = useState<any[]>([]);
     const [activeLiveSession, setActiveLiveSession] = useState<{ id: string, user: any, history: ChatMessage[] } | null>(null);
+    const previousChatIds = useRef<Set<string>>(new Set());
 
     useEffect(() => {
         const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
         socketRef.current = io(socketUrl);
         
         socketRef.current.on('chatSessionStarted', (sessionData) => {
-            const systemMessage: ChatMessage = {
-                id: `system-join-${Date.now()}`,
-                sender: MessageSender.BOT,
-                text: `You are now connected with ${sessionData.user.name}. The user's previous chat history is below.`,
-                timestamp: new Date().toISOString(),
-            };
-            setActiveLiveSession({
-                ...sessionData,
-                history: [...sessionData.history, systemMessage]
-            });
+            setActiveLiveSession(sessionData);
         });
 
         const loadTickets = async () => {
@@ -169,6 +163,19 @@ const AdminSupportPage: React.FC = () => {
             try {
                 const chats = await fetchAdminLiveChats();
                 setActiveChats(chats);
+
+                const newUnassignedChats = chats.filter(
+                    c => !c.adminSocketId && !previousChatIds.current.has(c._id)
+                );
+    
+                if (newUnassignedChats.length > 0) {
+                    newUnassignedChats.forEach(chat => {
+                        addToast(`New live chat request from ${chat.user.name}`, 'info');
+                    });
+                }
+    
+                previousChatIds.current = new Set(chats.map(c => c._id));
+
             } catch (err) {
                 console.error("Failed to fetch active chats", err);
             }
@@ -185,7 +192,7 @@ const AdminSupportPage: React.FC = () => {
     }, [addToast]);
 
     const handleJoinChat = (sessionId: string) => {
-        socketRef.current?.emit('adminJoinsChat', sessionId);
+        socketRef.current?.emit('adminJoinsChat', { sessionId, adminUser });
     };
 
     const ticketStats = useMemo(() => {
@@ -297,9 +304,17 @@ const AdminSupportPage: React.FC = () => {
                             sessionId={activeLiveSession.id}
                             initialHistory={activeLiveSession.history}
                             socket={socketRef.current!}
-                            onEndChat={() => {
+                            onEndChat={async () => {
                                 setActiveLiveSession(null);
                                 addToast("Live chat ended.", "info");
+                                // Refresh active chats list
+                                try {
+                                    const chats = await fetchAdminLiveChats();
+                                    setActiveChats(chats);
+                                    previousChatIds.current = new Set(chats.map(c => c._id));
+                                } catch (err) {
+                                    console.error("Failed to fetch active chats after ending session", err);
+                                }
                             }}
                             isAdmin
                         />

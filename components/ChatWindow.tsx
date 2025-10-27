@@ -17,7 +17,8 @@ const HomeView: React.FC<{
   faqs: FAQ[];
   onFaqClick: (faq: FAQ) => void;
   onContactClick: () => void;
-}> = ({ faqs, onFaqClick, onContactClick }) => (
+  onRequestLiveChat: () => void;
+}> = ({ faqs, onFaqClick, onContactClick, onRequestLiveChat }) => (
     <>
       <main className="flex-1 p-5 overflow-y-auto">
         <div className="relative">
@@ -35,10 +36,13 @@ const HomeView: React.FC<{
             )) : <p className="text-sm text-gray-500">Could not load FAQs.</p>}
         </div>
       </main>
-      <footer className="p-5 border-t bg-gray-50 text-center">
-        <p className="text-gray-600 text-sm mb-3">Need more help?</p>
-        <button onClick={onContactClick} className="bg-blue-600 text-white font-semibold px-6 py-2.5 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 w-full">
-          <MessageSquare size={18} /> Contact Us
+      <footer className="p-5 border-t bg-gray-50 text-center space-y-3">
+        <button onClick={onRequestLiveChat} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold px-6 py-2.5 rounded-full hover:from-blue-700 hover:to-purple-700 transition-colors flex items-center justify-center gap-2 w-full shadow-md">
+          <Headset size={18} /> Start Live Chat
+        </button>
+        <p className="text-gray-500 text-xs">or</p>
+        <button onClick={onContactClick} className="text-blue-600 font-semibold text-sm hover:underline">
+          See other contact options
         </button>
       </footer>
     </>
@@ -55,7 +59,7 @@ const ContactView: React.FC<{
             <button onClick={onRequestLiveChat} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 transition text-left">
                 <Headset className="text-blue-600 text-xl flex-shrink-0" />
                 <div>
-                    <p className="font-medium text-gray-800">Live Chat</p>
+                    <p className="font-medium text-gray-800">Chat with an Agent</p>
                     <p className="text-xs text-gray-500">Available 10 AM - 10 PM</p>
                 </div>
             </button>
@@ -163,7 +167,7 @@ const ChatView: React.FC<{
                     style={{ maxHeight: '120px' }}
                     disabled={isLoading}
                 />
-                <button type="submit" disabled={isLoading || !input.trim()} className="bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700 disabled:bg-blue-300 self-end mb-1 flex-shrink-0">
+                <button type="submit" disabled={isLoading || !input.trim()} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full p-2 hover:from-blue-700 hover:to-purple-700 disabled:from-blue-300 disabled:to-purple-300 self-end mb-1 flex-shrink-0 shadow">
                     {isLoading ? <Loader className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5"/>}
                 </button>
             </form>
@@ -189,6 +193,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
   
   const socketRef = useRef<Socket | null>(null);
   const [activeLiveSession, setActiveLiveSession] = useState<{ id: string, user: any, history: ChatMessage[] } | null>(null);
+
+  // Ref to hold the latest messages for callbacks, improving performance.
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const [callbackData, setCallbackData] = useState({ phone: user?.phone || '', message: '' });
   const [newTicketData, setNewTicketData] = useState({ subject: '', message: '' });
@@ -303,7 +313,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
 
   const handleRequestLiveChat = useCallback(() => {
     if (socketRef.current && user) {
-        socketRef.current.emit('requestLiveChat', { user: { _id: user._id, name: user.name }, history: messages }, (sessionData: any) => {
+        socketRef.current.emit('requestLiveChat', { user: { _id: user._id, name: user.name }, history: messagesRef.current }, (sessionData: any) => {
             if (sessionData) {
                 const initialSystemMessage: ChatMessage = {
                     id: `system-initial-${Date.now()}`,
@@ -323,7 +333,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
     } else {
         addToast('Could not connect to live chat. Please refresh and try again.', 'error');
     }
-  }, [user, messages, addToast]);
+  }, [user, addToast]);
 
   const handleBack = useCallback(() => {
       if (view === 'live_chat') return;
@@ -345,7 +355,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
 
   const renderView = () => {
     switch(view) {
-        case 'home': return <HomeView faqs={faqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} />;
+        case 'home': return <HomeView faqs={faqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} onRequestLiveChat={handleRequestLiveChat} />;
         case 'chat': return <ChatView messages={messages} input={input} onInputChange={handleChatInputChange} onKeyDown={handleChatInputKeyDown} onSubmit={handleSend} isLoading={isLoading} textareaRef={textareaRef} messagesEndRef={messagesEndRef} />;
         case 'contact': return <ContactView onRequestLiveChat={handleRequestLiveChat} onCallbackClick={() => setView('callback')} onTicketClick={() => setView('ticket')} />;
         case 'callback': return <CallbackView callbackData={callbackData} onFormChange={handleCallbackFormChange} onSubmit={handleCallbackSubmit} isLoading={isLoading} />;
@@ -369,7 +379,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
                 />
               </div>
             );
-        default: return <HomeView faqs={faqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} />;
+        default: return <HomeView faqs={faqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} onRequestLiveChat={handleRequestLiveChat} />;
     }
   };
 

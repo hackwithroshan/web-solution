@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LayoutGrid, Users, Server, Settings, LogOut, Package, List, HelpCircle, Megaphone, Bot } from 'lucide-react';
+import { LayoutGrid, Users, Server, Settings, LogOut, Package, List, HelpCircle, Megaphone, Bot, FileText, Rss } from 'lucide-react';
 
 interface AdminSidebarProps {
     isOpen: boolean;
@@ -20,6 +20,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, setIsOpen }) => {
     const settingsLinks = [
         { icon: Package, name: 'Manage Plans', path: '/admin/manage-plans' },
         { icon: List, name: 'Manage Categories', path: '/admin/manage-categories' },
+        { icon: FileText, name: 'Manage Pages', path: '/admin/manage-pages' },
+        { icon: Rss, name: 'Manage Blog', path: '/admin/manage-blog' },
         { icon: HelpCircle, name: 'Manage FAQs', path: '/admin/manage-faqs' },
         { icon: Bot, name: 'Manage Chatbot', path: '/admin/manage-chatbot' },
         { icon: Megaphone, name: 'Announcements', path: '/admin/announcements' },
@@ -43,7 +45,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, setIsOpen }) => {
             <aside className={`fixed inset-y-0 left-0 w-64 flex-shrink-0 bg-gray-800 text-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="h-20 flex items-center justify-center border-b border-gray-700">
                     <Link to="/" className="flex items-center">
-                        <img src="https://res.cloudinary.com/dvrqft9ov/image/upload/v1760926899/Untitled_design_10_kf8buw.png" alt="ApexNucleus Logo" className="h-7 w-auto" />
+                        <img src="https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_200/v1760926899/Untitled_design_10_kf8buw.png" alt="ApexNucleus Logo" className="h-7 w-auto" loading="lazy" decoding="async" />
                     </Link>
                 </div>
                 <nav className="flex-1 px-4 py-4">
@@ -97,4 +99,4 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, setIsOpen }) => {
     );
 };
 
-export default AdminSidebar;
+export default React.memo(AdminSidebar);

@@ -25,6 +25,9 @@ import { publicFaqRouter, adminFaqRouter } from './routes/faq.js';
 import notificationRoutes from './routes/notifications.js';
 import announcementRoutes from './routes/announcements.js';
 import performanceRoutes from './routes/performance.js';
+import { adminPageRouter, publicPageRouter } from './routes/pages.js';
+import { adminBlogRouter, publicBlogRouter } from './routes/blog.js';
+
 
 const PORT = process.env.PORT || 3001;
 const MONGO_URI = process.env.MONGO_URI;
@@ -56,6 +59,10 @@ app.use('/api/admin/faqs', adminFaqRouter);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin/announcements', announcementRoutes);
 app.use('/api/performance', performanceRoutes);
+app.use('/api/admin/pages', adminPageRouter);
+app.use('/api/pages', publicPageRouter);
+app.use('/api/admin/blog', adminBlogRouter);
+app.use('/api/blog', publicBlogRouter);
 
 
 // Socket.IO Connection Handling
@@ -112,7 +119,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('adminJoinsChat', async (sessionId) => {
+  socket.on('adminJoinsChat', async ({ sessionId, adminUser }) => {
     try {
         const session = await LiveChatSession.findById(sessionId);
 
@@ -129,10 +136,12 @@ io.on('connection', (socket) => {
 
         session.adminSocketId = socket.id;
         
+        const agentName = adminUser && adminUser.role === 'admin' ? 'Roshan pandey' : adminUser?.name || 'a support agent';
+
         const systemMessage = {
             id: `system-join-${Date.now()}`,
             sender: 'bot' as const,
-            text: "An agent has joined the chat.",
+            text: `Hi! You are now connected with ${agentName}.`,
             timestamp: new Date().toISOString()
         };
         session.history.push(systemMessage as any);
@@ -141,16 +150,21 @@ io.on('connection', (socket) => {
         socket.join(sessionId);
 
         io.to(session.userSocketId).emit('liveChatMessage', systemMessage);
+        
+        const adminSystemMessage = {
+            ...systemMessage,
+            text: `You have joined the chat with ${session.user.name}. The user's previous chat history is below.`
+        };
 
         const sessionDataForAdmin = {
             id: sessionId,
             user: session.user,
-            history: session.history
+            history: [...session.history.slice(0, -1), adminSystemMessage]
         };
         
         io.to(socket.id).emit('chatSessionStarted', sessionDataForAdmin);
         
-        logger.info(`Admin ${socket.id} joined chat with user ${session.userSocketId}. Session: ${sessionId}`);
+        logger.info(`Admin ${adminUser?.name} (${socket.id}) joined chat with user ${session.userSocketId}. Session: ${sessionId}`);
     } catch (error) {
         logger.error({ err: error }, "Failed to handle admin joining chat");
     }

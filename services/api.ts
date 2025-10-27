@@ -1,4 +1,4 @@
-import { User, AdminService, ServicePlan, ServiceCategory, UserService, Payment, Ticket, Message, AdminStats, UserRole, FAQ, ChatbotKnowledge, Notification, Announcement } from '../types';
+import { User, AdminService, ServicePlan, ServiceCategory, UserService, Payment, Ticket, Message, AdminStats, UserRole, FAQ, ChatbotKnowledge, Notification, Announcement, Page, BlogPost } from '../types';
 
 // The API_URL is determined based on the hostname.
 const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
@@ -170,3 +170,20 @@ export const markAllNotificationsAsRead = (): Promise<{ message: string }> => ap
 // --- Announcements ---
 export const fetchAnnouncements = (): Promise<Announcement[]> => apiFetch('/api/admin/announcements');
 export const createAnnouncement = (title: string, message: string): Promise<Announcement> => apiFetch('/api/admin/announcements', { method: 'POST', body: JSON.stringify({ title, message }) });
+
+// --- Admin Page Management ---
+export const fetchAdminPages = (): Promise<Page[]> => apiFetch('/api/admin/pages');
+export const createPage = (pageData: object): Promise<Page> => apiFetch('/api/admin/pages', { method: 'POST', body: JSON.stringify(pageData) });
+export const updatePage = (id: string, pageData: object): Promise<Page> => apiFetch(`/api/admin/pages/${id}`, { method: 'PUT', body: JSON.stringify(pageData) });
+export const deletePage = (id: string): Promise<{ message: string }> => apiFetch(`/api/admin/pages/${id}`, { method: 'DELETE' });
+
+// --- Admin Blog Management ---
+export const fetchAdminBlogPosts = (): Promise<BlogPost[]> => apiFetch('/api/admin/blog');
+export const createBlogPost = (postData: object): Promise<BlogPost> => apiFetch('/api/admin/blog', { method: 'POST', body: JSON.stringify(postData) });
+export const updateBlogPost = (id: string, postData: object): Promise<BlogPost> => apiFetch(`/api/admin/blog/${id}`, { method: 'PUT', body: JSON.stringify(postData) });
+export const deleteBlogPost = (id: string): Promise<{ message: string }> => apiFetch(`/api/admin/blog/${id}`, { method: 'DELETE' });
+
+// --- Public Page & Blog ---
+export const fetchPageBySlug = (slug: string): Promise<Page> => apiFetch(`/api/pages/${slug}`);
+export const fetchPublishedBlogPosts = (): Promise<BlogPost[]> => apiFetch('/api/blog');
+export const fetchBlogPostBySlug = (slug: string): Promise<BlogPost> => apiFetch(`/api/blog/${slug}`);

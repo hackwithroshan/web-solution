@@ -17,8 +17,8 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
     const [messages, setMessages] = useState<ChatMessage[]>(initialHistory);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    // FIX: Replaced NodeJS.Timeout with a browser-compatible type `ReturnType<typeof setTimeout>` to resolve namespace error.
-    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // FIX: Replaced NodeJS.Timeout with 'number' type for browser compatibility.
+    const typingTimeoutRef = useRef<number | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -80,7 +80,8 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
             clearTimeout(typingTimeoutRef.current);
         }
 
-        typingTimeoutRef.current = setTimeout(() => {
+        // FIX: Replaced NodeJS.Timeout with 'number' type for browser compatibility.
+        typingTimeoutRef.current = window.setTimeout(() => {
             socket.emit('stopTyping', sessionId);
         }, 2000); // 2 seconds of inactivity
     };

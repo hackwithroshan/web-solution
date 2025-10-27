@@ -41,7 +41,7 @@ const Footer: React.FC = () => {
           
           <div className="text-center md:text-left">
              <div className="flex items-center justify-center md:justify-start">
-              <img src="https://res.cloudinary.com/dvrqft9ov/image/upload/v1760926899/Untitled_design_10_kf8buw.png" alt="ApexNucleus Logo" className="h-7 w-auto" />
+              <img src="https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_200/v1760926899/Untitled_design_10_kf8buw.png" alt="ApexNucleus Logo" className="h-7 w-auto" loading="lazy" decoding="async" />
             </div>
             <p className="mt-4 text-sm text-gray-400">© Copyright 2024 ApexNucleus</p>
             <div className="flex space-x-3 mt-4 justify-center md:justify-start">
@@ -62,13 +62,13 @@ const Footer: React.FC = () => {
                 </div>
                 <form className="mt-4 md:mt-0 flex w-full max-w-sm">
                     <input type="email" placeholder="Your Email" className="bg-gray-700 text-white w-full px-4 py-2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <button type="submit" className="bg-blue-600 text-white font-bold px-6 py-2 rounded-r-md hover:bg-blue-700 transition-colors">SUBSCRIBE</button>
+                    <button type="submit" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-6 py-2 rounded-r-md hover:from-blue-700 hover:to-purple-700 transition-colors">SUBSCRIBE</button>
                 </form>
             </div>
         </div>
 
         <div className="mt-8 border-t border-gray-700 pt-8 pb-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
-           <p>Design by Inebur with ♥</p>
+           <p>Design by apexnucles</p>
         </div>
 
       </div>
@@ -76,4 +76,4 @@ const Footer: React.FC = () => {
   );
 };
 
-export default Footer;
+export default React.memo(Footer);

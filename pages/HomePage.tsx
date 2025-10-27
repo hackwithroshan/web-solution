@@ -1,207 +1,268 @@
 import React from 'react';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
-import { Code, Bot, BarChart, Zap, Search, PenTool, Star, Linkedin, Twitter } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-const HeroGraphic: React.FC = () => (
-  <div className="relative w-full h-full flex items-center justify-center [perspective:1200px]">
-    <div className="relative w-full max-w-lg h-[300px] animate-float-3d [transform-style:preserve-3d]">
-        <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/20 to-blue-500/20 rounded-2xl shadow-2xl border border-white/10 flex items-center justify-center [transform:rotateY(15deg)_rotateX(25deg)]">
-           <div className="w-48 h-48 rounded-full bg-gradient-to-br from-purple-800 to-blue-700 opacity-50 blur-2xl"></div>
-           <Code className="absolute w-20 h-20 text-white/50" />
-           <Bot className="absolute w-16 h-16 text-white/40 top-8 left-12 animate-pulse" style={{ animationDelay: '1s' }} />
-           <BarChart className="absolute w-16 h-16 text-white/40 bottom-8 right-12 animate-pulse" style={{ animationDelay: '2s' }}/>
-        </div>
-    </div>
-  </div>
-);
-
-const ServiceCard: React.FC<{ icon: React.ElementType, title: string, description: string }> = ({ icon: Icon, title, description }) => (
-    <div className="bg-[#2A2A3A] p-8 rounded-xl border border-white/10 hover:border-blue-500 hover:-translate-y-2 transition-all duration-300">
-        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center mb-6">
-            <Icon className="w-6 h-6 text-white"/>
-        </div>
-        <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
-        <p className="text-gray-400">{description}</p>
-    </div>
-);
-
-const TestimonialCard: React.FC<{ quote: string, name: string, title: string, company: string, avatar: string }> = ({ quote, name, title, company, avatar }) => (
-    <div className="bg-[#2A2A3A] p-8 rounded-xl border border-white/10">
-        <div className="flex items-center mb-4">
-            <Star className="w-5 h-5 text-yellow-400" />
-            <Star className="w-5 h-5 text-yellow-400 ml-1" />
-            <Star className="w-5 h-5 text-yellow-400 ml-1" />
-            <Star className="w-5 h-5 text-yellow-400 ml-1" />
-            <Star className="w-5 h-5 text-yellow-400 ml-1" />
-        </div>
-        <p className="text-gray-300 italic mb-6">"{quote}"</p>
-        <div className="flex items-center">
-            <img src={avatar} alt={name} className="w-12 h-12 rounded-full object-cover"/>
-            <div className="ml-4">
-                <p className="font-bold text-white">{name}</p>
-                <p className="text-sm text-gray-400">{title}, {company}</p>
-            </div>
-        </div>
-    </div>
-);
-
-const ProcessStep: React.FC<{ number: string, title: string, description: string }> = ({ number, title, description }) => (
-    <div className="relative pl-12">
-        <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center font-bold text-white">
-            {number}
-        </div>
-        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
-        <p className="text-gray-400">{description}</p>
-    </div>
-);
+import MagicBento from '../components/MagicBento';
+import RippleGrid from '../components/RippleGrid';
+import LogoLoop from '../components/LogoLoop';
+import SeoMeta from '../components/SeoMeta';
+import TestimonialScroller from '../components/TestimonialScroller';
+import ProcessCard from '../components/ProcessCard';
+import ParticleCanvas from '../components/ParticleCanvas';
 
 const HomePage: React.FC = () => {
     useScrollAnimation();
 
-    const services = [
-        { icon: Code, title: "Web Development", description: "Custom, scalable, and secure websites tailored to your business needs using the latest technologies." },
-        { icon: Bot, title: "AI Development", description: "Integrate AI-powered tools and solutions to automate processes, gain insights, and enhance user experience." },
-        { icon: Zap, title: "Hosting Solutions", description: "Reliable, high-performance hosting with 99.9% uptime to ensure your website is always fast and available." },
-        { icon: Search, title: "SEO & Marketing", description: "Boost your online visibility and drive organic traffic with our data-driven SEO and marketing strategies." },
-        { icon: PenTool, title: "UI/UX Design", description: "Crafting intuitive and engaging user interfaces that provide a seamless and memorable user journey." },
-        { icon: BarChart, title: "Digital Strategy", description: "Comprehensive digital strategies to align your technology with your business goals for maximum impact." },
+    const techLogos = [
+        { node: <span className="font-bold text-xl text-gray-400">Hostinger</span>, title: "Hostinger" },
+        { node: <span className="font-bold text-xl text-gray-400">Figma</span>, title: "Figma" },
+        { node: <span className="font-bold text-xl text-gray-400">Docker</span>, title: "Docker" },
+        { node: <span className="font-bold text-xl text-gray-400">WordPress</span>, title: "WordPress" },
+        { node: <span className="font-bold text-xl text-gray-400">Elementor</span>, title: "Elementor" },
+    ];
+    
+    const testimonials1 = [
+        { 
+            quote: "Working with ApexNucleus was a game-changer. Their expertise in AI integration streamlined our entire workflow and boosted our productivity by 40%.",
+            name: "Jane Doe",
+            title: "CEO",
+            company: "Innovate Inc.",
+            avatar: "https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_96,h_96,c_fill,g_face/v1719482483/demo/woman-testimonial.jpg"
+        },
+        { 
+            quote: "The custom web platform they built for us is not only beautiful but incredibly fast and reliable. Their team was professional and delivered beyond our expectations.",
+            name: "John Smith",
+            title: "Founder",
+            company: "Solutions Co.",
+            avatar: "https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_96,h_96,c_fill,g_face/v1719482483/demo/man-testimonial.jpg"
+        },
+        { 
+            quote: "Their cloud hosting is top-notch. We've had 99.99% uptime since migrating, and their support team is always responsive and helpful. Highly recommended!",
+            name: "Emily White",
+            title: "CTO",
+            company: "TechForward",
+            avatar: "https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_96,h_96,c_fill,g_face/v1719482483/demo/woman-testimonial-2.jpg"
+        },
+        { 
+            quote: "ApexNucleus handled our domain registration and setup flawlessly. The process was smooth, and they provided excellent guidance on choosing the right TLD for our brand.",
+            name: "Michael Brown",
+            title: "Marketing Director",
+            company: "BrandMakers",
+            avatar: "https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_96,h_96,c_fill,g_face/v1719482483/demo/man-testimonial-2.jpg"
+        },
+    ];
+
+    const testimonials2 = [
+        { 
+            quote: "The mobile app they developed has received rave reviews from our users. The UI/UX is intuitive and the performance is stellar. A truly professional team.",
+            name: "Sarah Lee",
+            title: "Product Manager",
+            company: "Appify",
+            avatar: "https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_96,h_96,c_fill,g_face/v1719482483/demo/woman-testimonial-3.jpg"
+        },
+        { 
+            quote: "We were struggling with security vulnerabilities. ApexNucleus's managed security service has given us peace of mind. Their proactive approach is commendable.",
+            name: "David Chen",
+            title: "IT Manager",
+            company: "SecureData",
+            avatar: "https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_96,h_96,c_fill,g_face/v1719482483/demo/man-testimonial-3.jpg"
+        },
+        { 
+            quote: "From concept to launch, the web development process was transparent and collaborative. They listened to our needs and delivered a product that exceeded our vision.",
+            name: "Jessica Rodriguez",
+            title: "Founder",
+            company: "Artisan Goods",
+            avatar: "https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_96,h_96,c_fill,g_face/v1719482483/demo/woman-testimonial-4.jpg"
+        },
+        { 
+            quote: "The AI chatbot they implemented on our site has reduced support tickets by 30% and improved customer satisfaction. An incredible return on investment.",
+            name: "Kevin Martinez",
+            title: "Support Lead",
+            company: "HelpDesk Heroes",
+            avatar: "https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_96,h_96,c_fill,g_face/v1719482483/demo/man-testimonial-4.jpg"
+        }
     ];
 
   return (
-    <div className="text-white bg-[#1E1E2C] overflow-hidden">
-      {/* 1. Hero Section */}
-      <section className="relative pt-20 pb-32 bg-gradient-to-b from-[#1E1E2C] to-[#3A0066]/30">
-        <div className="container mx-auto px-6 grid md:grid-cols-2 gap-8 items-center">
-          <div className="text-center md:text-left">
-            <h1 className="text-5xl md:text-6xl font-extrabold leading-tight scroll-animate slide-up">
-              Transform Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">Digital Edge</span>
-            </h1>
-            <p className="mt-6 text-lg text-gray-300 max-w-xl mx-auto md:mx-0 scroll-animate slide-up delay-100">
-              We craft cutting-edge web experiences, AI-powered tools, and digital strategies to propel your business forward.
-            </p>
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 scroll-animate slide-up delay-200 justify-center md:justify-start">
-              <a href="#" className="bg-blue-600 text-white font-bold px-8 py-3 rounded-md hover:bg-blue-700 transition-colors transform hover:scale-105">
-                Book a Call
-              </a>
-              <a href="#" className="bg-transparent border-2 border-blue-500 text-blue-400 font-bold px-8 py-3 rounded-md hover:bg-blue-500 hover:text-white transition-colors transform hover:scale-105">
-                For WhatsApp Us
-              </a>
-            </div>
-          </div>
-          <div className="relative hidden md:block h-96 scroll-animate fade-in delay-300">
-             <HeroGraphic />
-          </div>
+    <>
+    <SeoMeta
+        title="ApexNucleus: Web & Cloud Solutions | AI-Powered Digital Transformation"
+        description="We craft cutting-edge web experiences, AI-powered tools, and digital strategies to propel your business forward. Explore our services for hosting, development, and more."
+    />
+    <div className="relative text-white bg-[#1E1E2C] overflow-x-hidden">
+       {/* Global background element */}
+        <div className="fixed inset-0 z-0">
+             <RippleGrid
+                gridColor="#252535"
+                rippleIntensity={0.02}
+                gridSize={20}
+                gridThickness={20}
+                mouseInteraction={true}
+                mouseInteractionRadius={1.2}
+                opacity={0.8}
+            />
         </div>
-      </section>
 
-      {/* 2. Partners/Tech Logos Section */}
-      <section className="py-12 bg-[#252535]">
-        <div className="container mx-auto px-6">
-            <h2 className="text-center text-gray-400 font-semibold uppercase tracking-widest scroll-animate fade-in">
-                Technologies We Embrace
-            </h2>
-            <div className="flex justify-center items-center flex-wrap gap-x-12 gap-y-6 mt-8 text-gray-400 scroll-animate fade-in delay-100">
-                <span className="font-bold text-xl">Hostinger</span>
-                <span className="font-bold text-xl">Figma</span>
-                <span className="font-bold text-xl">Docker</span>
-                <span className="font-bold text-xl">WordPress</span>
-                <span className="font-bold text-xl">Elementor</span>
-            </div>
-        </div>
-      </section>
-      
-      {/* 3. Our Services Section */}
-      <section className="py-24">
-        <div className="container mx-auto px-6">
-            <div className="text-center mb-16">
-                <h2 className="text-4xl font-bold scroll-animate slide-up">Our Services</h2>
-                <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto scroll-animate slide-up delay-100">
-                    We offer comprehensive digital solutions to elevate your business in the modern era.
+      {/* Wrapper for all content to be above the background */}
+      <div className="relative z-10">
+          {/* 1. Hero Section */}
+          <section className="pt-40 pb-20 min-h-[70vh] flex items-center justify-center text-center">
+            <div className="container mx-auto px-6">
+              <div className="max-w-4xl mx-auto">
+                 <h1 className="text-5xl md:text-6xl font-extrabold leading-tight scroll-animate slide-up">
+                  Innovating the Digital Future — <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">Smarter, Faster, and Limitless</span>
+                </h1>
+                <p className="mt-6 text-lg text-gray-300 mx-auto scroll-animate slide-up delay-100">
+                  ApexNucleus delivers intelligent digital solutions across Hosting, Domains, AI Systems, Website Development, Mobile Apps, and Ads Management — empowering businesses across the UK and beyond to grow fearlessly in the digital era.
                 </p>
+                 <p className="mt-4 text-md text-gray-400 mx-auto scroll-animate slide-up delay-200 max-w-3xl">
+                    Welcome to <strong>ApexNucleus</strong>, where creativity meets technology and innovation fuels transformation.
+                    We help brands, businesses, and creators build their digital foundations — from fast, secure hosting to AI-driven automation and world-class web development.
+                    Our mission is simple — to make technology effortless, efficient, and extraordinarily powerful for every business.
+                </p>
+                <div className="mt-10 flex flex-col sm:flex-row gap-4 scroll-animate slide-up delay-300 justify-center">
+                  <a href="#" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-8 py-3 rounded-full transition-all duration-500 ease-in-out transform hover:scale-105 shadow-lg bg-[length:200%_auto] hover:bg-[right_center]">
+                    Get Started Today
+                  </a>
+                  <a href="#" className="bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold px-8 py-3 rounded-full hover:from-gray-800 hover:to-gray-900 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                    Book a Free Consultation
+                  </a>
+                </div>
+              </div>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {services.map((service, index) => (
-                    <div key={service.title} className={`scroll-animate scale-up delay-${(index % 3) * 100 + 100}`}>
-                        <ServiceCard {...service} />
+          </section>
+
+          {/* 2. Partners/Tech Logos Section */}
+          <section className="py-12">
+            <div className="container mx-auto px-6">
+                <h2 className="text-center text-gray-400 font-semibold uppercase tracking-widest scroll-animate fade-in">
+                    Technologies We Embrace
+                </h2>
+                <div className="mt-8 scroll-animate fade-in delay-100">
+                    <LogoLoop
+                        logos={techLogos}
+                        speed={80}
+                        direction="left"
+                        logoHeight={24}
+                        gap={60}
+                        pauseOnHover
+                        fadeOut
+                        fadeOutColor="#1E1E2C"
+                        ariaLabel="Technologies we embrace"
+                    />
+                </div>
+            </div>
+          </section>
+          
+          {/* 3. Our Services Section */}
+          <section className="py-24">
+            <div className="container mx-auto px-6">
+                <div className="text-center mb-16">
+                    <h2 className="text-4xl font-bold scroll-animate slide-up">Our Services</h2>
+                    <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto scroll-animate slide-up delay-100">
+                        We offer comprehensive digital solutions to elevate your business in the modern era.
+                    </p>
+                </div>
+                <div className="flex justify-center scroll-animate fade-in delay-200">
+                    <MagicBento 
+                        textAutoHide={true}
+                        enableStars={true}
+                        enableSpotlight={true}
+                        enableBorderGlow={true}
+                        enableTilt={true}
+                        enableMagnetism={true}
+                        clickEffect={true}
+                        spotlightRadius={300}
+                        particleCount={12}
+                        glowColor="132, 0, 255"
+                    />
+                </div>
+            </div>
+          </section>
+
+          {/* 4. Our Process Section */}
+          <section className="py-24 relative overflow-hidden">
+            <div className="absolute inset-0 z-0">
+                <ParticleCanvas />
+            </div>
+            <div className="container mx-auto px-6 relative z-10">
+                <div className="text-center mb-20">
+                    <h2 className="text-4xl font-bold scroll-animate slide-up">Our Proven Process</h2>
+                    <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto scroll-animate slide-up delay-100">
+                        We follow a structured methodology to ensure your project's success from concept to launch.
+                    </p>
+                </div>
+                <div className="relative">
+                    {/* Dashed line connecting cards on desktop */}
+                    <div className="hidden md:block absolute top-1/2 left-0 w-full h-px -translate-y-1/2" aria-hidden="true">
+                        <svg width="100%" height="100%">
+                            <line x1="15%" y1="50%" x2="85%" y2="50%" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="2" strokeDasharray="10 10" />
+                        </svg>
                     </div>
-                ))}
+                    
+                    <div className="grid md:grid-cols-3 gap-x-12 gap-y-16 relative">
+                         <div className="scroll-animate slide-up delay-200">
+                            <ProcessCard 
+                                number="1" 
+                                title="Discovery & Strategy" 
+                                description="We start by understanding your vision, goals, and target audience to create a robust project roadmap." 
+                            />
+                        </div>
+                         <div className="scroll-animate slide-up delay-300">
+                            <ProcessCard 
+                                number="2" 
+                                title="Design & Development" 
+                                description="Our team designs intuitive interfaces and writes clean code to build a high-performance, scalable product." 
+                            />
+                        </div>
+                         <div className="scroll-animate slide-up delay-400">
+                            <ProcessCard 
+                                number="3" 
+                                title="Launch & Optimize" 
+                                description="We deploy your project and monitor its performance, providing ongoing support and optimization." 
+                            />
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-      </section>
+          </section>
 
-      {/* 4. Our Process Section */}
-      <section className="py-24 bg-black/20">
-        <div className="container mx-auto px-6">
-            <div className="text-center mb-16">
-                <h2 className="text-4xl font-bold scroll-animate slide-up">Our Proven Process</h2>
-                <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto scroll-animate slide-up delay-100">
-                    We follow a structured methodology to ensure your project's success from concept to launch.
+          {/* 5. Testimonials Section */}
+          <section className="py-24">
+            <div className="container mx-auto px-6">
+                <div className="text-center mb-16">
+                    <h2 className="text-4xl font-bold scroll-animate slide-up">What Our Clients Say</h2>
+                    <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto scroll-animate slide-up delay-100">
+                        Hear from businesses that have experienced the ApexNucleus difference.
+                    </p>
+                </div>
+                <div className="bg-black/10 backdrop-blur-sm border border-white/10 py-6 rounded-2xl overflow-hidden scroll-animate scale-up delay-200">
+                    <TestimonialScroller testimonials={testimonials1} direction="left" speed="normal" />
+                    <TestimonialScroller testimonials={testimonials2} direction="right" speed="normal" />
+                </div>
+            </div>
+          </section>
+
+          {/* 6. Final CTA Section */}
+          <section className="py-24">
+            <div className="container mx-auto px-6 text-center">
+                <h2 className="text-4xl md:text-5xl font-extrabold scroll-animate slide-up">
+                    Transform Your Ideas Into Reality!
+                </h2>
+                <p className="mt-4 text-lg text-gray-200 max-w-3xl mx-auto scroll-animate slide-up delay-100">
+                    Bringing ideas into reality. Let’s make your idea from concept to a successful digital product.
                 </p>
+                <div className="mt-8 flex justify-center gap-4 scroll-animate slide-up delay-200">
+                    <a href="#" className="bg-white text-purple-700 font-bold px-8 py-3 rounded-full hover:bg-gray-200 transition-colors transform hover:scale-105 shadow-lg">
+                        Share Your Vision
+                    </a>
+                     <a href="#" className="bg-transparent border-2 border-white text-white font-bold px-8 py-3 rounded-full hover:bg-white hover:text-purple-700 transition-colors transform hover:scale-105">
+                        Schedule Consultation
+                    </a>
+                </div>
             </div>
-            <div className="grid md:grid-cols-3 gap-12 relative">
-                 <div className="absolute top-4 left-0 w-full h-0.5 bg-white/10 hidden md:block">
-                    <div className="w-full h-full bg-gradient-to-r from-purple-500 to-blue-500"></div>
-                 </div>
-                 <div className="scroll-animate slide-up delay-200"><ProcessStep number="1" title="Discovery & Strategy" description="We start by understanding your vision, goals, and target audience to create a robust project roadmap." /></div>
-                 <div className="scroll-animate slide-up delay-300"><ProcessStep number="2" title="Design & Development" description="Our team designs intuitive interfaces and writes clean code to build a high-performance, scalable product." /></div>
-                 <div className="scroll-animate slide-up delay-400"><ProcessStep number="3" title="Launch & Optimize" description="We deploy your project and monitor its performance, providing ongoing support and optimization." /></div>
-            </div>
-        </div>
-      </section>
-
-      {/* 5. Testimonials Section */}
-      <section className="py-24">
-        <div className="container mx-auto px-6">
-            <div className="text-center mb-16">
-                <h2 className="text-4xl font-bold scroll-animate slide-up">What Our Clients Say</h2>
-                <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto scroll-animate slide-up delay-100">
-                    Hear from businesses that have experienced the ApexNucleus difference.
-                </p>
-            </div>
-            <div className="grid lg:grid-cols-2 gap-8">
-                 <div className="scroll-animate scale-up delay-200">
-                    <TestimonialCard 
-                        quote="Working with ApexNucleus was a game-changer. Their expertise in AI integration streamlined our entire workflow and boosted our productivity by 40%."
-                        name="Jane Doe"
-                        title="CEO"
-                        company="Innovate Inc."
-                        avatar="https://randomuser.me/api/portraits/women/44.jpg"
-                    />
-                 </div>
-                 <div className="scroll-animate scale-up delay-300">
-                    <TestimonialCard 
-                        quote="The custom web platform they built for us is not only beautiful but incredibly fast and reliable. Their team was professional and delivered beyond our expectations."
-                        name="John Smith"
-                        title="Founder"
-                        company="Solutions Co."
-                        avatar="https://randomuser.me/api/portraits/men/32.jpg"
-                    />
-                 </div>
-            </div>
-        </div>
-      </section>
-
-      {/* 6. Final CTA Section */}
-      <section className="py-24 bg-gradient-to-r from-[#6A0DAD] to-[#007BFF]">
-        <div className="container mx-auto px-6 text-center">
-            <h2 className="text-4xl md:text-5xl font-extrabold scroll-animate slide-up">
-                Transform Your Ideas Into Reality!
-            </h2>
-            <p className="mt-4 text-lg text-gray-200 max-w-3xl mx-auto scroll-animate slide-up delay-100">
-                Bringing ideas into reality. Let’s make your idea from concept to a successful digital product.
-            </p>
-            <div className="mt-8 flex justify-center gap-4 scroll-animate slide-up delay-200">
-                <a href="#" className="bg-white text-purple-700 font-bold px-8 py-3 rounded-md hover:bg-gray-200 transition-colors transform hover:scale-105">
-                    Share Your Vision
-                </a>
-                 <a href="#" className="bg-transparent border-2 border-white text-white font-bold px-8 py-3 rounded-md hover:bg-white hover:text-purple-700 transition-colors transform hover:scale-105">
-                    Schedule Consultation
-                </a>
-            </div>
-        </div>
-      </section>
+          </section>
+      </div>
     </div>
+    </>
   );
 };
 
