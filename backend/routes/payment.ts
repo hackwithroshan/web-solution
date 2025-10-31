@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { protect } from '../middleware/auth.js';
-import ServicePlan from '../models/ServicePlan.js';
+import ServicePlan, { IServicePlan } from '../models/ServicePlan.js';
 import Service from '../models/Service.js';
 import Order from '../models/Order.js';
 import Payment from '../models/Payment.js';
@@ -24,21 +24,38 @@ router.use(protect);
 // @desc    Create an order for new service purchases from cart
 // @route   POST /api/payment/create-cart-order
 router.post('/create-cart-order', async (req: Request, res: Response, next: NextFunction) => {
-    const { planIds } = req.body;
+    const { cartData } = req.body;
     try {
         if (!req.user) {
             throw new ApiError(401, 'Not authorized');
         }
-        
+        if (!Array.isArray(cartData) || cartData.length === 0) {
+            throw new ApiError(400, 'Cart data is invalid or empty.');
+        }
+
+        const planIds = cartData.map((item: any) => item.planId);
         const plans = await ServicePlan.find({ '_id': { $in: planIds } });
         if (plans.length !== planIds.length) throw new ApiError(404, 'One or more service plans not found.');
+        
+        const plansMap = new Map(plans.map(p => [p._id.toString(), p]));
 
-        const totalAmount = plans.reduce((acc, plan) => acc + plan.price, 0);
-        const items = plans.map(plan => ({
-            plan: plan._id,
-            itemType: 'new_purchase' as const,
-            price: plan.price
-        }));
+        // FIX: Add explicit type for 'item' to improve type safety.
+        const totalAmount = cartData.reduce((acc: number, item: { planId: string }) => {
+            const plan = plansMap.get(item.planId);
+            return acc + (plan?.price || 0);
+        }, 0);
+
+        // FIX: Add explicit type for 'item' to improve type safety and prevent potential errors.
+        const items = cartData.map((item: { planId: string; domainName?: string; }) => {
+             const plan = plansMap.get(item.planId);
+             if (!plan) throw new ApiError(404, `Plan with id ${item.planId} not found.`);
+             return {
+                plan: plan._id,
+                itemType: 'new_purchase' as const,
+                price: plan.price,
+                domainName: item.domainName
+             }
+        });
 
         const order = new Order({
             user: req.user._id,
@@ -85,7 +102,12 @@ router.post('/verify-cart-payment', async (req: Request, res: Response, next: Ne
             
             // Create new services for the user
             const newServices = order.items.map(item => {
-                const plan = item.plan as any; // Cast as any to access properties
+                // FIX: Add a type guard to ensure item.plan is a populated document before accessing its properties.
+                // This resolves the error "Property 'price' does not exist on type 'unknown'".
+                if (!item.plan || typeof item.plan !== 'object' || !('_id' in item.plan)) {
+                    throw new ApiError(500, 'Order plan data is missing or not populated.');
+                }
+                const plan = item.plan as IServicePlan;
                 return {
                     user: req.user!._id,
                     planName: plan.name,
@@ -93,6 +115,7 @@ router.post('/verify-cart-payment', async (req: Request, res: Response, next: Ne
                     startDate: new Date(),
                     renewalDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // Assuming 1 year for now
                     price: plan.price,
+                    domainName: item.domainName,
                 }
             });
 

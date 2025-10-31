@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
-import { protect, admin } from '../middleware/auth.js';
+import { protect, admin, support } from '../middleware/auth.js';
 import Ticket from '../models/Ticket.js';
 import Message from '../models/Message.js';
 import ApiError from '../utils/ApiError.js';
@@ -99,9 +99,9 @@ router.post('/request-callback', async (req: Request, res: Response, next: NextF
 // instead of mistakenly treating 'all' as a parameter for the '/:id' route,
 // which causes the "Cast to ObjectId failed" error.
 
-// @desc    Get all tickets (admin)
+// @desc    Get all tickets (admin or support)
 // @route   GET /api/tickets/all
-router.get('/all', admin, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/all', support, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const tickets = await Ticket.aggregate([
             {
@@ -138,7 +138,7 @@ router.get('/all', admin, async (req: Request, res: Response, next: NextFunction
     }
 });
 
-// @desc    Get a single ticket by ID (for admin or ticket owner)
+// @desc    Get a single ticket by ID (for admin, support, or ticket owner)
 // @route   GET /api/tickets/:id
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -188,9 +188,11 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
         const ticket = ticketAggregation[0];
 
         if (!ticket) throw new ApiError(404, 'Ticket not found');
-
         
-        if (req.user.role !== 'admin' && ticket.user?._id?.toString() !== req.user.id) {
+        const isOwner = ticket.user?._id?.toString() === req.user.id;
+        const isSupportStaff = req.user.role === 'admin' || req.user.role === 'support';
+
+        if (!isOwner && !isSupportStaff) {
             throw new ApiError(403, 'Not authorized to view this ticket');
         }
         res.json(ticket);

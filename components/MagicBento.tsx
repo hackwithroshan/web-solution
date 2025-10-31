@@ -8,7 +8,7 @@ const DEFAULT_GLOW_COLOR = '132, 0, 255';
 const MOBILE_BREAKPOINT = 768;
 
 interface CardDataItem {
-  // FIX: Replaced JSX.Element with React.ReactNode to resolve "Cannot find namespace 'JSX'" error.
+  // FIX: Replaced JSX.Element with React.ReactNode to resolve "Cannot find namespace 'JSX'" error and improve type safety.
   icon: React.ReactNode;
   color: string;
   title: string;
@@ -397,7 +397,8 @@ const GlobalSpotlight: React.FC<{
         rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
 
       isInsideSection.current = mouseInside || false;
-      const cards = gridRef.current.querySelectorAll<HTMLElement>('.card');
+      // FIX: Changed querySelectorAll to use type assertion to avoid "Untyped function calls may not accept type arguments" error.
+      const cards = gridRef.current.querySelectorAll('.card') as NodeListOf<HTMLElement>;
 
       if (!mouseInside) {
         gsap.to(spotlightRef.current, {
@@ -458,8 +459,9 @@ const GlobalSpotlight: React.FC<{
 
     const handleMouseLeave = () => {
       isInsideSection.current = false;
-      gridRef.current?.querySelectorAll<HTMLElement>('.card').forEach(card => {
-        card.style.setProperty('--glow-intensity', '0');
+      // FIX: Changed querySelectorAll to use a type cast inside forEach to avoid "Untyped function calls may not accept type arguments" error.
+      gridRef.current?.querySelectorAll('.card').forEach(card => {
+        (card as HTMLElement).style.setProperty('--glow-intensity', '0');
       });
       if (spotlightRef.current) {
         gsap.to(spotlightRef.current, {
@@ -725,7 +727,6 @@ const MagicBento: React.FC<{
               </>
             );
 
-            // FIX: Refactored to use standard JSX syntax instead of React.createElement. This resolves the "Untyped function calls may not accept type arguments" error by using the idiomatic JSX transform for .tsx files.
             if (enableStars) {
               return (
                 <ParticleCard
@@ -744,7 +745,6 @@ const MagicBento: React.FC<{
               );
             }
 
-            // FIX: Refactored to use standard JSX syntax instead of React.createElement. The imperative `ref` callback logic is compatible with JSX.
             return (
               <div
                 key={index}

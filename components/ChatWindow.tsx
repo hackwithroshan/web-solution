@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from 'react';
 import { MessageSender, ChatMessage, FAQ } from '../types';
-import { Send, X, Loader, Bot, Search, ChevronRight, MessageSquare, ArrowLeft, Headset, Phone } from 'lucide-react';
+import { Send, X, Loader, Bot, Search, ChevronRight, MessageSquare, ArrowLeft, Headset, Phone, Paperclip } from 'lucide-react';
 import { getChatbotResponse } from '../services/geminiService';
-import { fetchPublicFAQs, createTicket, requestCallback } from '../services/api';
+import { fetchPublicFAQs, createTicket, requestCallback, submitChatFeedback } from '../services/api';
 import { v4 as uuidv4 } from 'uuid';
 import ChatBubble from './ui/ChatBubble';
 import { useToast } from '../hooks/useToast';
@@ -10,6 +10,8 @@ import Button from './ui/Button';
 import { useAuth } from '../hooks/useAuth';
 import { io, Socket } from 'socket.io-client';
 import LiveChatInterface from './LiveChatInterface';
+import TypingIndicator from './ui/TypingIndicator';
+import FeedbackView from './ui/FeedbackView';
 
 // --- SUB-COMPONENTS (Moved outside main component to prevent re-creation on re-render) ---
 
@@ -18,12 +20,22 @@ const HomeView: React.FC<{
   onFaqClick: (faq: FAQ) => void;
   onContactClick: () => void;
   onRequestLiveChat: () => void;
-}> = ({ faqs, onFaqClick, onContactClick, onRequestLiveChat }) => (
+  isConnecting: boolean;
+  searchTerm: string;
+  onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}> = ({ faqs, onFaqClick, onContactClick, onRequestLiveChat, isConnecting, searchTerm, onSearchChange }) => (
     <>
       <main className="flex-1 p-5 overflow-y-auto">
         <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input type="text" placeholder="Search" className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input 
+              type="text" 
+              placeholder="Search FAQs..." 
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={searchTerm}
+              onChange={onSearchChange}
+              aria-label="Search FAQs"
+            />
         </div>
         
         <h3 className="mt-6 mb-3 font-semibold text-gray-800">Popular FAQs</h3>
@@ -33,12 +45,24 @@ const HomeView: React.FC<{
                     <span className="text-sm text-gray-700">{faq.question}</span>
                     <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
                 </button>
-            )) : <p className="text-sm text-gray-500">Could not load FAQs.</p>}
+            )) : <p className="text-sm text-gray-500 text-center py-4">{searchTerm ? 'No FAQs match your search.' : 'Could not load FAQs.'}</p>}
         </div>
       </main>
       <footer className="p-5 border-t bg-gray-50 text-center space-y-3">
-        <button onClick={onRequestLiveChat} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold px-6 py-2.5 rounded-full hover:from-blue-700 hover:to-purple-700 transition-colors flex items-center justify-center gap-2 w-full shadow-md">
-          <Headset size={18} /> Start Live Chat
+        <button 
+          onClick={onRequestLiveChat}
+          disabled={isConnecting}
+          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold px-6 py-2.5 rounded-full hover:from-blue-700 hover:to-purple-700 transition-colors flex items-center justify-center gap-2 w-full shadow-md disabled:from-blue-400 disabled:to-purple-400 disabled:cursor-not-allowed"
+        >
+          {isConnecting ? (
+            <>
+              <Loader size={18} className="animate-spin" /> Connecting...
+            </>
+          ) : (
+            <>
+              <Headset size={18} /> Start Live Chat
+            </>
+          )}
         </button>
         <p className="text-gray-500 text-xs">or</p>
         <button onClick={onContactClick} className="text-blue-600 font-semibold text-sm hover:underline">
@@ -52,14 +76,15 @@ const ContactView: React.FC<{
   onRequestLiveChat: () => void;
   onCallbackClick: () => void;
   onTicketClick: () => void;
-}> = ({ onRequestLiveChat, onCallbackClick, onTicketClick }) => (
+  isConnecting: boolean;
+}> = ({ onRequestLiveChat, onCallbackClick, onTicketClick, isConnecting }) => (
     <div className="p-5 flex flex-col justify-center h-full">
         <div className="space-y-3 text-center">
             <p className="text-gray-600 mb-4">How would you like to get in touch?</p>
-            <button onClick={onRequestLiveChat} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 transition text-left">
+            <button onClick={onRequestLiveChat} disabled={isConnecting} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 transition text-left disabled:opacity-50 disabled:cursor-not-allowed">
                 <Headset className="text-blue-600 text-xl flex-shrink-0" />
                 <div>
-                    <p className="font-medium text-gray-800">Chat with an Agent</p>
+                    <p className="font-medium text-gray-800">{isConnecting ? 'Connecting...' : 'Chat with an Agent'}</p>
                     <p className="text-xs text-gray-500">Available 10 AM - 10 PM</p>
                 </div>
             </button>
@@ -115,6 +140,18 @@ const TicketView: React.FC<{
     </main>
 );
 
+const FilePreview: React.FC<{ file: File; onRemove: () => void }> = ({ file, onRemove }) => (
+    <div className="p-2 border-t bg-white flex items-center justify-between">
+        <div className="flex items-center gap-2 overflow-hidden">
+            <img src={URL.createObjectURL(file)} alt="preview" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+            <span className="text-sm text-gray-600 truncate">{file.name}</span>
+        </div>
+        <button onClick={onRemove} className="text-gray-500 hover:text-red-500 flex-shrink-0 ml-2">
+            <X size={18} />
+        </button>
+    </div>
+);
+
 const ChatView: React.FC<{
     messages: ChatMessage[];
     input: string;
@@ -124,7 +161,13 @@ const ChatView: React.FC<{
     isLoading: boolean;
     textareaRef: React.RefObject<HTMLTextAreaElement>;
     messagesEndRef: React.RefObject<HTMLDivElement>;
-}> = ({ messages, input, onInputChange, onKeyDown, onSubmit, isLoading, textareaRef, messagesEndRef }) => (
+    selectedFile: File | null;
+    onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onFileRemove: () => void;
+}> = ({ messages, input, onInputChange, onKeyDown, onSubmit, isLoading, textareaRef, messagesEndRef, selectedFile, onFileSelect, onFileRemove }) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    return (
     <>
         <main className="flex-1 p-4 overflow-y-auto bg-gray-50">
             {messages.map((msg, index) => {
@@ -134,58 +177,57 @@ const ChatView: React.FC<{
                     <ChatBubble key={msg.id} message={msg} isOwn={msg.sender === MessageSender.USER} showAvatar={showAvatar} />
                 )
             })}
-            {isLoading && (
-                <div className="flex items-end gap-3 my-1 justify-start">
-                    <div className="w-9 h-9 flex-shrink-0">
-                        <div className="bg-gray-200 p-2 rounded-full flex-shrink-0">
-                            <Bot className="w-5 h-5 text-gray-600" />
-                        </div>
-                    </div>
-                    <div className="max-w-[80%] flex flex-col items-start">
-                        <div className="p-3 rounded-lg bg-gray-100 text-gray-800 self-start rounded-r-lg rounded-tl-lg">
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-typing-bounce" style={{ animationDelay: '0s' }}></span>
-                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-typing-bounce" style={{ animationDelay: '0.15s' }}></span>
-                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-typing-bounce" style={{ animationDelay: '0.3s' }}></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {isLoading && <TypingIndicator senderType="bot" />}
             <div ref={messagesEndRef} />
         </main>
-        <footer className="p-3 border-t bg-white">
-            <form onSubmit={onSubmit} className="flex items-end gap-2">
-                <textarea
-                    ref={textareaRef}
-                    rows={1}
-                    value={input}
-                    onChange={onInputChange}
-                    onKeyDown={onKeyDown}
-                    placeholder="Ask a question..."
-                    className="flex-1 py-2 px-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto bg-white"
-                    style={{ maxHeight: '120px' }}
-                    disabled={isLoading}
-                />
-                <button type="submit" disabled={isLoading || !input.trim()} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full p-2 hover:from-blue-700 hover:to-purple-700 disabled:from-blue-300 disabled:to-purple-300 self-end mb-1 flex-shrink-0 shadow">
-                    {isLoading ? <Loader className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5"/>}
-                </button>
-            </form>
+        <footer className="border-t bg-white">
+            {selectedFile && <FilePreview file={selectedFile} onRemove={onFileRemove} />}
+            <div className="p-3">
+                <form onSubmit={onSubmit} className="flex items-end gap-2">
+                    <input type="file" ref={fileInputRef} onChange={onFileSelect} className="hidden" accept="image/*" />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="p-2 text-gray-500 hover:text-blue-600 self-end mb-1 flex-shrink-0" aria-label="Attach file">
+                        <Paperclip size={20} />
+                    </button>
+                    <textarea
+                        ref={textareaRef}
+                        rows={1}
+                        value={input}
+                        onChange={onInputChange}
+                        onKeyDown={onKeyDown}
+                        placeholder="Ask a question..."
+                        className="flex-1 py-2 px-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto bg-white"
+                        style={{ maxHeight: '120px' }}
+                        disabled={isLoading}
+                        aria-label="Chat input"
+                    />
+                    <button type="submit" disabled={isLoading || (!input.trim() && !selectedFile)} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full p-2 hover:from-blue-700 hover:to-purple-700 disabled:from-blue-300 disabled:to-purple-300 self-end mb-1 flex-shrink-0 shadow" aria-label="Send message">
+                        {isLoading ? <Loader className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5"/>}
+                    </button>
+                </form>
+            </div>
         </footer>
     </>
-);
+    );
+};
 
 interface ChatWindowProps {
   onClose: () => void;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
-  type View = 'home' | 'chat' | 'contact' | 'callback' | 'ticket' | 'live_chat';
+export interface ChatWindowRef {
+  handleCloseAttempt: () => void;
+}
+
+const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref) => {
+  type View = 'home' | 'chat' | 'contact' | 'callback' | 'ticket' | 'live_chat' | 'feedback';
   const [view, setView] = useState<View>('home');
   const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [faqSearchTerm, setFaqSearchTerm] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { addToast } = useToast();
@@ -193,6 +235,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
   
   const socketRef = useRef<Socket | null>(null);
   const [activeLiveSession, setActiveLiveSession] = useState<{ id: string, user: any, history: ChatMessage[] } | null>(null);
+  const [chatTypeForFeedback, setChatTypeForFeedback] = useState<'bot' | 'live_chat' | null>(null);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   // Ref to hold the latest messages for callbacks, improving performance.
   const messagesRef = useRef(messages);
@@ -203,6 +247,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
   const [callbackData, setCallbackData] = useState({ phone: user?.phone || '', message: '' });
   const [newTicketData, setNewTicketData] = useState({ subject: '', message: '' });
 
+  const filteredFaqs = useMemo(() => {
+    if (!faqSearchTerm.trim()) {
+        return faqs;
+    }
+    return faqs.filter(faq => 
+        faq.question.toLowerCase().includes(faqSearchTerm.toLowerCase())
+    );
+  }, [faqs, faqSearchTerm]);
+
+  const triggerFeedback = (chatType: 'bot' | 'live_chat') => {
+    setChatTypeForFeedback(chatType);
+    setView('feedback');
+  };
+
   const handleCallbackFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setCallbackData(prev => ({ ...prev, [name]: value }));
@@ -212,6 +270,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
       const { name, value } = e.target;
       setNewTicketData(prev => ({ ...prev, [name]: value }));
   }, []);
+
+  const handleCloseAttempt = useCallback(() => {
+    const isChattingWithBot = view === 'chat' && (messages.length > 1 || selectedFile);
+    const isLiveChatting = view === 'live_chat';
+
+    if (isChattingWithBot) {
+        triggerFeedback('bot');
+    } else if (isLiveChatting) {
+        if (window.confirm('Are you sure you want to end this chat session?')) {
+            if (socketRef.current && activeLiveSession) {
+                socketRef.current.emit('endLiveChat', activeLiveSession.id);
+            }
+        }
+    } else {
+        onClose();
+    }
+  }, [view, messages, activeLiveSession, onClose, socketRef, selectedFile]);
+
+  useImperativeHandle(ref, () => ({
+    handleCloseAttempt
+  }));
 
   useEffect(() => {
     if(view === 'home') {
@@ -236,9 +315,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
     socketRef.current.on('chatSessionEnded', () => {
         addToast("The live chat session has ended.", "info");
         setActiveLiveSession(null);
-        setView('home');
+        triggerFeedback('live_chat');
     });
-    return () => { socketRef.current?.disconnect(); };
+    return () => { 
+        socketRef.current?.off('chatSessionEnded');
+        socketRef.current?.disconnect(); 
+    };
   }, [user, addToast]);
   
   useEffect(() => {
@@ -256,13 +338,36 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
   
   const handleSend = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
-    const userMessage: ChatMessage = { id: uuidv4(), sender: MessageSender.USER, text: input, timestamp: new Date().toISOString(), status: 'sent' };
+    if ((!input.trim() && !selectedFile) || isLoading) return;
+
+    let userMessage: ChatMessage;
+
+    if (selectedFile) {
+        userMessage = { 
+            id: uuidv4(), 
+            sender: MessageSender.USER, 
+            text: input, 
+            timestamp: new Date().toISOString(), 
+            status: 'sent',
+            attachment: {
+                url: URL.createObjectURL(selectedFile),
+                name: selectedFile.name,
+                type: 'image'
+            }
+        };
+    } else {
+        userMessage = { id: uuidv4(), sender: MessageSender.USER, text: input, timestamp: new Date().toISOString(), status: 'sent' };
+    }
+
     setMessages(prev => [...prev, userMessage]);
+    
+    const fileToSend = selectedFile;
     setInput('');
+    setSelectedFile(null);
     setIsLoading(true);
+
     try {
-      const botResponseText = await getChatbotResponse(input, messages);
+      const botResponseText = await getChatbotResponse(input, messages, fileToSend);
       const botMessage: ChatMessage = { id: uuidv4(), sender: MessageSender.BOT, text: botResponseText, timestamp: new Date().toISOString() };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
@@ -271,7 +376,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
     } finally {
         setIsLoading(false);
     }
-  }, [input, isLoading, messages]);
+  }, [input, isLoading, messages, selectedFile]);
   
   const handleFaqClick = useCallback((faq: FAQ) => {
     const userMessage: ChatMessage = { id: uuidv4(), sender: MessageSender.USER, text: faq.question, timestamp: new Date().toISOString(), status: 'sent' };
@@ -312,8 +417,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
   }, [newTicketData, addToast]);
 
   const handleRequestLiveChat = useCallback(() => {
+    if (isConnecting) return;
+
+    setIsConnecting(true);
     if (socketRef.current && user) {
+        const timeout = setTimeout(() => {
+            setIsConnecting(false);
+            addToast('Connection timed out. Please try again.', 'error');
+        }, 10000); // 10 second timeout
+
         socketRef.current.emit('requestLiveChat', { user: { _id: user._id, name: user.name }, history: messagesRef.current }, (sessionData: any) => {
+            clearTimeout(timeout);
+            setIsConnecting(false);
             if (sessionData) {
                 const initialSystemMessage: ChatMessage = {
                     id: `system-initial-${Date.now()}`,
@@ -331,12 +446,32 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
             }
         });
     } else {
+        setIsConnecting(false);
         addToast('Could not connect to live chat. Please refresh and try again.', 'error');
     }
-  }, [user, addToast]);
+  }, [user, addToast, isConnecting]);
+
+  const handleFeedbackSubmit = async (rating: number, comment: string) => {
+    if (!chatTypeForFeedback) return;
+    setIsSubmittingFeedback(true);
+    try {
+        await submitChatFeedback({
+            chatType: chatTypeForFeedback,
+            rating,
+            comment,
+            sessionId: (chatTypeForFeedback === 'live_chat' && activeLiveSession) ? activeLiveSession.id : undefined
+        });
+        addToast("Thank you for your feedback!", 'success');
+    } catch (error: any) {
+        addToast(error.message || 'Could not submit feedback.', 'error');
+    } finally {
+        setIsSubmittingFeedback(false);
+        onClose();
+    }
+  };
 
   const handleBack = useCallback(() => {
-      if (view === 'live_chat') return;
+      if (view === 'live_chat' || view === 'feedback') return;
       setView('home');
   }, [view]);
 
@@ -347,17 +482,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
   const handleChatInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (!isLoading && input.trim()) {
+      if (!isLoading && (input.trim() || selectedFile)) {
         (e.currentTarget.form as HTMLFormElement).requestSubmit();
       }
     }
-  }, [isLoading, input]);
+  }, [isLoading, input, selectedFile]);
+  
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+        setSelectedFile(file);
+    } else if (file) {
+        addToast('Please select an image file.', 'error');
+    }
+  };
 
   const renderView = () => {
     switch(view) {
-        case 'home': return <HomeView faqs={faqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} onRequestLiveChat={handleRequestLiveChat} />;
-        case 'chat': return <ChatView messages={messages} input={input} onInputChange={handleChatInputChange} onKeyDown={handleChatInputKeyDown} onSubmit={handleSend} isLoading={isLoading} textareaRef={textareaRef} messagesEndRef={messagesEndRef} />;
-        case 'contact': return <ContactView onRequestLiveChat={handleRequestLiveChat} onCallbackClick={() => setView('callback')} onTicketClick={() => setView('ticket')} />;
+        case 'home': return <HomeView faqs={filteredFaqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} onRequestLiveChat={handleRequestLiveChat} isConnecting={isConnecting} searchTerm={faqSearchTerm} onSearchChange={e => setFaqSearchTerm(e.target.value)} />;
+        case 'chat': return <ChatView messages={messages} input={input} onInputChange={handleChatInputChange} onKeyDown={handleChatInputKeyDown} onSubmit={handleSend} isLoading={isLoading} textareaRef={textareaRef} messagesEndRef={messagesEndRef} selectedFile={selectedFile} onFileSelect={handleFileSelect} onFileRemove={() => setSelectedFile(null)} />;
+        case 'contact': return <ContactView onRequestLiveChat={handleRequestLiveChat} onCallbackClick={() => setView('callback')} onTicketClick={() => setView('ticket')} isConnecting={isConnecting} />;
         case 'callback': return <CallbackView callbackData={callbackData} onFormChange={handleCallbackFormChange} onSubmit={handleCallbackSubmit} isLoading={isLoading} />;
         case 'ticket': return <TicketView newTicketData={newTicketData} onFormChange={handleTicketFormChange} onSubmit={handleTicketSubmit} isLoading={isLoading} />;
         case 'live_chat': 
@@ -372,30 +516,39 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
                     sessionId={activeLiveSession.id}
                     initialHistory={activeLiveSession.history}
                     socket={socketRef.current}
-                    onEndChat={() => {
-                        setActiveLiveSession(null);
-                        setView('home');
-                    }}
+                    onEndChat={handleCloseAttempt}
                 />
               </div>
             );
-        default: return <HomeView faqs={faqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} onRequestLiveChat={handleRequestLiveChat} />;
+        case 'feedback': 
+            if (!chatTypeForFeedback) {
+                onClose();
+                return null;
+            }
+            return <FeedbackView 
+                        chatType={chatTypeForFeedback}
+                        onSubmit={handleFeedbackSubmit}
+                        onSkip={onClose}
+                        isSubmitting={isSubmittingFeedback}
+                    />;
+        default: return <HomeView faqs={faqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} onRequestLiveChat={handleRequestLiveChat} isConnecting={isConnecting} searchTerm={faqSearchTerm} onSearchChange={e => setFaqSearchTerm(e.target.value)} />;
     }
   };
 
-  const viewTitles: Record<View, string> = { home: 'Help Center', chat: 'Support Bot', contact: 'Contact Us', callback: 'Request a Callback', ticket: 'Create a Ticket', live_chat: 'Live Chat' };
+  const viewTitles: Record<View, string> = { home: 'Help Center', chat: 'Support Bot', contact: 'Contact Us', callback: 'Request a Callback', ticket: 'Create a Ticket', live_chat: 'Live Chat', feedback: 'Provide Feedback' };
   const Subtitle = () => {
     if (view === 'home') return <p className="text-xs opacity-80">How can we help you today?</p>;
     if (view === 'contact') return <p className="text-xs opacity-80">Select an option below</p>;
     if (view === 'live_chat' && activeLiveSession) return <p className="text-xs opacity-80">You are chatting with an agent</p>;
+    if (view === 'feedback') return <p className="text-xs opacity-80">Your opinion is important to us</p>;
     return null;
   };
 
   return (
-    <div className="absolute bottom-20 right-5 w-[350px] h-[550px] bg-white rounded-xl shadow-2xl flex flex-col pointer-events-auto animate-slide-in-up">
-      <header className="p-4 bg-gray-800 text-white rounded-t-xl flex justify-between items-center flex-shrink-0">
+    <div className="fixed inset-0 sm:inset-auto sm:absolute sm:bottom-20 sm:right-5 sm:w-[350px] sm:h-[550px] bg-white sm:rounded-xl shadow-2xl flex flex-col pointer-events-auto animate-slide-in-up">
+      <header className="p-4 bg-gray-800 text-white sm:rounded-t-xl flex justify-between items-center flex-shrink-0">
         <div className="flex items-center gap-3">
-          {view !== 'home' && (
+          {view !== 'home' && view !== 'feedback' && (
             <button onClick={handleBack} aria-label="Back">
               <ArrowLeft size={20} />
             </button>
@@ -405,13 +558,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
             <Subtitle />
           </div>
         </div>
-        <button onClick={onClose} aria-label="Close chat">
-          <X size={20} />
-        </button>
+        {view !== 'feedback' && (
+            <button onClick={handleCloseAttempt} aria-label="Close chat">
+              <X size={20} />
+            </button>
+        )}
       </header>
       {renderView()}
     </div>
   );
-};
+});
 
 export default ChatWindow;

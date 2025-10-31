@@ -58,8 +58,11 @@ const CheckoutPage: React.FC = () => {
 
         setIsProcessing(true);
         try {
-            const planIds = cartItems.map(item => item.plan._id);
-            const { orderId, razorpayOrder } = await createCartOrder(planIds);
+            const cartPayload = cartItems.map(item => ({
+                planId: item.plan._id,
+                domainName: item.domainName
+            }));
+            const { orderId, razorpayOrder } = await createCartOrder(cartPayload);
             const keys = await fetchPublicKeys();
 
             const options: RazorpayOptions = {
@@ -123,6 +126,7 @@ const CheckoutPage: React.FC = () => {
                                         <li key={item.plan._id} className="py-4 flex justify-between items-center">
                                             <div>
                                                 <p className="font-semibold text-gray-800">{item.plan.name}</p>
+                                                {item.domainName && <p className="text-sm text-blue-600 font-mono">{item.domainName}</p>}
                                                 <p className="text-sm text-gray-500">{item.plan.category.name}</p>
                                             </div>
                                             <div className="flex items-center gap-4">

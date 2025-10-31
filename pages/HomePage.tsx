@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
 import MagicBento from '../components/MagicBento';
-import RippleGrid from '../components/RippleGrid';
-import LogoLoop from '../components/LogoLoop';
+import { LogoLoop } from '../components/LogoLoop';
 import SeoMeta from '../components/SeoMeta';
 import TestimonialScroller from '../components/TestimonialScroller';
 import ProcessCard from '../components/ProcessCard';
 import ParticleCanvas from '../components/ParticleCanvas';
+// FIX: Import 'RippleGrid' component to resolve 'Cannot find name' error.
+import RippleGrid from '../components/RippleGrid';
+import { Link } from 'react-router-dom';
+import ConsultationModal from '../components/ConsultationModal';
 
 const HomePage: React.FC = () => {
     useScrollAnimation();
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const techLogos = [
         { node: <span className="font-bold text-xl text-gray-400">Hostinger</span>, title: "Hostinger" },
@@ -119,12 +123,12 @@ const HomePage: React.FC = () => {
                     Our mission is simple — to make technology effortless, efficient, and extraordinarily powerful for every business.
                 </p>
                 <div className="mt-10 flex flex-col sm:flex-row gap-4 scroll-animate slide-up delay-300 justify-center">
-                  <a href="#" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-8 py-3 rounded-full transition-all duration-500 ease-in-out transform hover:scale-105 shadow-lg bg-[length:200%_auto] hover:bg-[right_center]">
+                  <Link to="/register" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-8 py-3 rounded-full transition-all duration-500 ease-in-out transform hover:scale-105 shadow-lg bg-[length:200%_auto] hover:bg-[right_center]">
                     Get Started Today
-                  </a>
-                  <a href="#" className="bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold px-8 py-3 rounded-full hover:from-gray-800 hover:to-gray-900 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                  </Link>
+                  <button onClick={() => setIsModalOpen(true)} className="bg-transparent border-2 border-white text-white font-bold px-8 py-3 rounded-full hover:bg-white hover:text-gray-800 transition-colors transform hover:scale-105 shadow-lg">
                     Book a Free Consultation
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
@@ -251,16 +255,17 @@ const HomePage: React.FC = () => {
                     Bringing ideas into reality. Let’s make your idea from concept to a successful digital product.
                 </p>
                 <div className="mt-8 flex justify-center gap-4 scroll-animate slide-up delay-200">
-                    <a href="#" className="bg-white text-purple-700 font-bold px-8 py-3 rounded-full hover:bg-gray-200 transition-colors transform hover:scale-105 shadow-lg">
+                    <button onClick={() => setIsModalOpen(true)} className="bg-white text-purple-700 font-bold px-8 py-3 rounded-full hover:bg-gray-200 transition-colors transform hover:scale-105 shadow-lg">
                         Share Your Vision
-                    </a>
-                     <a href="#" className="bg-transparent border-2 border-white text-white font-bold px-8 py-3 rounded-full hover:bg-white hover:text-purple-700 transition-colors transform hover:scale-105">
+                    </button>
+                     <button onClick={() => setIsModalOpen(true)} className="bg-transparent border-2 border-white text-white font-bold px-8 py-3 rounded-full hover:bg-white hover:text-purple-700 transition-colors transform hover:scale-105">
                         Schedule Consultation
-                    </a>
+                    </button>
                 </div>
             </div>
           </section>
       </div>
+      <ConsultationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
     </>
   );

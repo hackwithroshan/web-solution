@@ -10,6 +10,8 @@ import { useToast } from '../hooks/useToast';
 import UserSidebar from '../components/UserSidebar';
 import DashboardHeader from '../components/DashboardHeader';
 import { useCart } from '../hooks/useCart';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
 
 // --- Skeleton Components for Loading State ---
 const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
@@ -62,6 +64,13 @@ const AllServicesPage: React.FC = () => {
     const { user } = useAuth();
     const { addToCart } = useCart();
     const navigate = useNavigate();
+
+    // State for domain modal
+    const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState<ServicePlan | null>(null);
+    const [domainName, setDomainName] = useState('');
+    const [domainError, setDomainError] = useState('');
+
 
     useEffect(() => {
         const loadData = async () => {
@@ -138,8 +147,30 @@ const AllServicesPage: React.FC = () => {
             navigate('/login');
             return;
         }
-        addToCart(plan);
-        addToast(`${plan.name} added to cart!`, 'success');
+        if (plan.category.name.toLowerCase().includes('domain registration')) {
+            setSelectedPlan(plan);
+            setIsDomainModalOpen(true);
+        } else {
+            addToCart(plan);
+            addToast(`${plan.name} added to cart!`, 'success');
+        }
+    };
+
+    const handleDomainSubmit = () => {
+        const domainRegex = /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!domainName.trim() || !domainRegex.test(domainName)) {
+            setDomainError('Please enter a valid domain name (e.g., example.com).');
+            return;
+        }
+
+        if (selectedPlan) {
+            addToCart(selectedPlan, domainName);
+            addToast(`${selectedPlan.name} for ${domainName} added to cart!`, 'success');
+            setIsDomainModalOpen(false);
+            setDomainName('');
+            setSelectedPlan(null);
+            setDomainError('');
+        }
     };
 
     return (
@@ -221,6 +252,36 @@ const AllServicesPage: React.FC = () => {
                     </div>
                 </main>
             </div>
+             {isDomainModalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 text-gray-800">
+                        <h3 className="text-lg font-bold">Enter Your Domain</h3>
+                        <p className="text-sm text-gray-600 mt-1">Please provide the domain name you wish to register for the plan: <strong>{selectedPlan?.name}</strong>.</p>
+                        <div className="mt-4">
+                            <Input
+                                label="Domain Name"
+                                value={domainName}
+                                onChange={(e) => {
+                                    setDomainName(e.target.value);
+                                    setDomainError('');
+                                }}
+                                placeholder="example.com"
+                                variant="light"
+                                required
+                            />
+                            {domainError && <p className="text-red-500 text-xs mt-1">{domainError}</p>}
+                        </div>
+                        <div className="flex justify-end gap-3 mt-6">
+                            <Button variant="secondary" onClick={() => {
+                                setIsDomainModalOpen(false);
+                                setDomainName('');
+                                setDomainError('');
+                            }}>Cancel</Button>
+                            <Button onClick={handleDomainSubmit}>Confirm & Add</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

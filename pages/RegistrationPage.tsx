@@ -46,7 +46,7 @@ const RegistrationPage: React.FC = () => {
   const { addToast } = useToast();
   
   useEffect(() => {
-    // FIX: Replaced NodeJS.Timeout with 'number' for browser environment.
+    // FIX: Replaced NodeJS.Timeout with 'number' for browser environment compatibility, as window.setTimeout returns a number.
     let timer: number;
     if (resendTimer > 0) {
       timer = window.setTimeout(() => setResendTimer(resendTimer - 1), 1000);
@@ -210,35 +210,30 @@ const RegistrationPage: React.FC = () => {
                                       </div>
                                       <div className="ml-3 text-sm">
                                           <label htmlFor="terms" className="font-medium text-gray-300">
-                                          I agree to the <a href="#" className="text-blue-500 hover:underline">Terms</a> and <a href="#" className="text-blue-500 hover:underline">Privacy Policy</a>.
+                                              I agree to the{' '}
+                                              <a href="#" className="text-blue-500 hover:text-blue-400">Terms & Conditions</a>
                                           </label>
-                                          {errors.agreed && <p className="text-red-400 text-xs mt-1">{errors.agreed}</p>}
+                                           {errors.agreed && <p className="text-red-400 text-xs mt-1">{errors.agreed}</p>}
                                       </div>
                                   </div>
-
-                                  <div className="flex justify-between items-center pt-4">
-                                      <Button type="button" variant="secondary" onClick={() => setStep(1)}>
-                                          Back
-                                      </Button>
-                                      <Button type="submit" className="justify-center" disabled={isLoading}>
+                                  <div className="pt-2">
+                                      <Button type="submit" className="w-full justify-center" disabled={isLoading}>
                                           {isLoading ? <Loader className="animate-spin h-5 w-5 mx-auto" /> : 'Create Account'}
                                       </Button>
                                   </div>
-                              </>
+                               </>
                           )}
                           
-                           <p className="text-center text-sm text-gray-400 pt-2">
-                              Already have an account?{' '}
-                              <Link to="/login" className="font-medium text-blue-500 hover:text-blue-400">
-                                  Sign In
-                              </Link>
-                          </p>
+                          <p className="text-center text-sm text-gray-400 pt-2">
+                            Already have an account?{' '}
+                            <Link to="/login" className="font-medium text-blue-500 hover:text-blue-400">
+                                Sign In
+                            </Link>
+                         </p>
                       </form>
                   </div>
-              </div>
-              <div className="order-1 lg:order-2">
-                  <AuthGraphic />
-              </div>
+               </div>
+               <AuthGraphic />
             </div>
         </div>
       </div>

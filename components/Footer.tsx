@@ -12,10 +12,10 @@ const Footer: React.FC = () => {
             <h3 className="font-semibold tracking-wider uppercase text-gray-400">Services</h3>
             <div className="grid grid-cols-2 gap-4 mt-4">
               <ul className="space-y-2">
-                <li><a href="#/services" className="text-gray-400 hover:text-white">Web Development</a></li>
-                <li><a href="#/services" className="text-gray-400 hover:text-white">AI Development</a></li>
-                <li><a href="#/services" className="text-gray-400 hover:text-white">Hosting Solutions</a></li>
-                <li><a href="#/services" className="text-gray-400 hover:text-white">Domain Names</a></li>
+                <li><Link to="/services" className="text-gray-400 hover:text-white">Web Development</Link></li>
+                <li><Link to="/services" className="text-gray-400 hover:text-white">AI Development</Link></li>
+                <li><Link to="/services" className="text-gray-400 hover:text-white">Hosting Solutions</Link></li>
+                <li><Link to="/services" className="text-gray-400 hover:text-white">Domain Names</Link></li>
               </ul>
             </div>
           </div>
@@ -25,7 +25,7 @@ const Footer: React.FC = () => {
             <ul className="mt-4 space-y-2">
               <li><Link to="/" className="text-gray-400 hover:text-white">Home</Link></li>
               <li><Link to="/services" className="text-gray-400 hover:text-white">Services</Link></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">Contact</a></li>
+              <li><Link to="/contact" className="text-gray-400 hover:text-white">Contact</Link></li>
               <li><a href="#" className="text-gray-400 hover:text-white">Blog</a></li>
             </ul>
           </div>

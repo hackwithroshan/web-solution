@@ -36,7 +36,12 @@ const ServicesTable: React.FC<{ services: AdminService[] }> = ({ services }) => 
             <tbody className="bg-white divide-y divide-gray-200">
                 {services.map((service) => (
                     <tr key={service._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{service.planName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <div className="font-medium text-gray-900">{service.planName}</div>
+                            {service.domainName && (
+                                <div className="text-gray-500">{service.domainName}</div>
+                            )}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{service.user?.name || 'N/A'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm"><ServiceStatusBadge status={service.status} /></td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(service.renewalDate).toLocaleDateString()}</td>

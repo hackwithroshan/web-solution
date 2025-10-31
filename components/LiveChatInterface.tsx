@@ -4,6 +4,7 @@ import { ChatMessage, MessageSender } from '../types';
 import { Send, Power, User, Bot } from 'lucide-react';
 import Button from './ui/Button';
 import ChatBubble from './ui/ChatBubble';
+import TypingIndicator from './ui/TypingIndicator';
 
 interface LiveChatInterfaceProps {
     sessionId: string;
@@ -23,28 +24,22 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
 
     useEffect(() => {
         const handleNewMessage = (message: ChatMessage) => {
-            const expectedSender = isAdmin ? MessageSender.USER : MessageSender.BOT;
-            if (message.sender === expectedSender) {
-                 setMessages(prev => [...prev, message]);
-            }
+            setMessages(prev => [...prev, message]);
         };
-        const handleSessionEnd = () => onEndChat();
         const handleStartTyping = () => setIsTyping(true);
         const handleStopTyping = () => setIsTyping(false);
 
         socket.on('liveChatMessage', handleNewMessage);
-        socket.on('chatSessionEnded', handleSessionEnd);
         socket.on('isTyping', handleStartTyping);
         socket.on('hasStoppedTyping', handleStopTyping);
 
         return () => {
             socket.off('liveChatMessage', handleNewMessage);
-            socket.off('chatSessionEnded', handleSessionEnd);
             socket.off('isTyping', handleStartTyping);
             socket.off('hasStoppedTyping', handleStopTyping);
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         };
-    }, [socket, onEndChat, isAdmin]);
+    }, [socket]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -86,16 +81,11 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
         }, 2000); // 2 seconds of inactivity
     };
 
-    const handleEndChat = () => {
-        socket.emit('endLiveChat', sessionId);
-        onEndChat();
-    };
-
     return (
         <div className="flex-1 flex flex-col h-full bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="p-4 border-b flex justify-between items-center">
                 <h3 className="font-bold text-gray-800">Live Chat Session</h3>
-                <Button onClick={handleEndChat} variant="secondary" className="!text-sm !py-1.5 !px-3 !bg-red-50 hover:!bg-red-100 !text-red-700">
+                <Button onClick={onEndChat} variant="secondary" className="!text-sm !py-1.5 !px-3 !bg-red-50 hover:!bg-red-100 !text-red-700">
                     <Power size={14} className="mr-1.5" /> End Chat
                 </Button>
             </div>
@@ -113,24 +103,7 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
                         />
                     );
                 })}
-                 {isTyping && (
-                    <div className="flex items-end gap-3 my-1 justify-start">
-                        <div className="w-9 h-9 flex-shrink-0">
-                             <div className="bg-gray-200 p-2 rounded-full flex-shrink-0">
-                                {isAdmin ? <User className="w-5 h-5 text-gray-600" /> : <Bot className="w-5 h-5 text-gray-600" />}
-                            </div>
-                        </div>
-                        <div className="max-w-[80%] flex flex-col items-start">
-                            <div className="p-3 rounded-lg bg-gray-100 text-gray-800 self-start rounded-r-lg rounded-tl-lg">
-                                <div className="flex items-center gap-1.5">
-                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-typing-bounce" style={{ animationDelay: '0s' }}></span>
-                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-typing-bounce" style={{ animationDelay: '0.15s' }}></span>
-                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-typing-bounce" style={{ animationDelay: '0.3s' }}></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {isTyping && <TypingIndicator senderType={isAdmin ? 'user' : 'agent'} />}
                 <div ref={messagesEndRef} />
             </div>
             <div className="p-4 border-t bg-gray-50">

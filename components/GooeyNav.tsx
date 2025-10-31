@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface GooeyNavItem {
   label: string;
@@ -31,6 +32,14 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
   const filterRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [activeIndex, setActiveIndex] = useState(initialActiveIndex);
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (initialActiveIndex !== activeIndex) {
+      setActiveIndex(initialActiveIndex);
+    }
+  }, [initialActiveIndex, activeIndex]);
+
 
   const noise = (n = 1) => n / 2 - Math.random() * n;
   const getXY = (distance: number, pointIndex: number, totalPoints: number) => {
@@ -100,25 +109,39 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     textRef.current.innerText = element.innerText;
   };
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, index: number) => {
+    e.preventDefault();
     const liEl = e.currentTarget.parentElement as HTMLLIElement;
     if (!liEl) return;
 
-    if (activeIndex === index) return;
+    const targetPath = e.currentTarget.getAttribute('href');
+    if (!targetPath) return;
+
+    if (activeIndex === index) {
+      navigate(targetPath);
+      return;
+    }
+    
     setActiveIndex(index);
     updateEffectPosition(liEl);
+    
     if (filterRef.current) {
       const particles = filterRef.current.querySelectorAll('.particle');
       particles.forEach(p => filterRef.current!.removeChild(p));
     }
+    
     if (textRef.current) {
       textRef.current.classList.remove('active');
       void textRef.current.offsetWidth;
       textRef.current.classList.add('active');
     }
+
     if (filterRef.current) {
       makeParticles(filterRef.current);
     }
+
+    navigate(targetPath);
   };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>, index: number) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -128,6 +151,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
       }
     }
   };
+  
   useEffect(() => {
     if (!navRef.current || !containerRef.current || !textRef.current) return;
     const activeLi = navRef.current.querySelectorAll('li')[activeIndex];

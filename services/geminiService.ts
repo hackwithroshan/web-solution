@@ -6,18 +6,26 @@ const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:300
  * Gets a response from the chatbot backend service.
  * @param message The user's current message.
  * @param history The previous chat messages for context.
+ * @param attachment An optional file (image) to send.
  * @returns A promise that resolves to the bot's string response.
  */
-export const getChatbotResponse = async (message: string, history: ChatMessage[]): Promise<string> => {
+export const getChatbotResponse = async (message: string, history: ChatMessage[], attachment: File | null = null): Promise<string> => {
   try {
     const token = localStorage.getItem('authToken');
+    const formData = new FormData();
+    formData.append('message', message);
+    formData.append('history', JSON.stringify(history));
+    if (attachment) {
+      formData.append('attachment', attachment);
+    }
+
     const response = await fetch(`${API_URL}/api/chat`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        // Content-Type is set automatically by the browser for FormData
         'Authorization': token ? `Bearer ${token}` : '',
       },
-      body: JSON.stringify({ message, history }),
+      body: formData,
     });
 
     if (!response.ok) {

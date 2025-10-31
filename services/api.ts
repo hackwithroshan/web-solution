@@ -67,6 +67,8 @@ export const analyzeWebsitePerformance = (url: string): Promise<any> => apiFetch
 
 // --- User & Service Management ---
 export const fetchUserServices = (userId: string): Promise<UserService[]> => apiFetch(`/api/users/${userId}/services`);
+export const fetchUserServiceById = (serviceId: string): Promise<UserService> => apiFetch(`/api/users/service/${serviceId}`);
+export const cancelUserService = (serviceId: string): Promise<{ message: string }> => apiFetch(`/api/users/service/${serviceId}/cancel`, { method: 'PUT' });
 export const fetchPaymentHistory = (userId: string): Promise<Payment[]> => apiFetch(`/api/users/${userId}/payments`);
 export const updateUserProfile = (profileData: Partial<User>): Promise<User> => apiFetch('/api/users/profile', { method: 'PUT', body: JSON.stringify(profileData) });
 export const updateUserPassword = (passwordData: object): Promise<{ message: string }> => apiFetch('/api/users/profile/password', { method: 'PUT', body: JSON.stringify(passwordData) });
@@ -77,7 +79,7 @@ export const fetchCategories = (): Promise<ServiceCategory[]> => apiFetch('/api/
 
 // --- Payment & Checkout ---
 export const fetchPublicKeys = (): Promise<{ razorpayKeyId: string }> => apiFetch('/api/config/keys');
-export const createCartOrder = (planIds: string[]): Promise<{ orderId: string, razorpayOrder: any }> => apiFetch('/api/payment/create-cart-order', { method: 'POST', body: JSON.stringify({ planIds }) });
+export const createCartOrder = (cartData: { planId: string, domainName?: string }[]): Promise<{ orderId: string, razorpayOrder: any }> => apiFetch('/api/payment/create-cart-order', { method: 'POST', body: JSON.stringify({ cartData }) });
 export const verifyCartPayment = (verificationData: object): Promise<any> => apiFetch('/api/payment/verify-cart-payment', { method: 'POST', body: JSON.stringify(verificationData) });
 export const createBulkRenewalOrder = (serviceIds: string[]): Promise<{ orderId: string, razorpayOrder: any }> => apiFetch('/api/payment/create-renewal-order', { method: 'POST', body: JSON.stringify({ serviceIds }) });
 export const verifyBulkRenewalPayment = (verificationData: object): Promise<any> => apiFetch('/api/payment/verify-renewal-payment', { method: 'POST', body: JSON.stringify(verificationData) });
@@ -92,6 +94,7 @@ export const updateUser = (userId: string, userData: Partial<User>): Promise<Use
 export const deleteUser = (userId: string): Promise<{ message: string }> => apiFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
 export const adminFetchUserServices = (userId: string): Promise<UserService[]> => apiFetch(`/api/admin/users/${userId}/services`);
 export const adminAddServiceToUser = (userId: string, serviceData: object): Promise<UserService> => apiFetch(`/api/admin/users/${userId}/services`, { method: 'POST', body: JSON.stringify(serviceData) });
+export const adminUpdateUserService = (userId: string, serviceId: string, serviceData: object): Promise<UserService> => apiFetch(`/api/admin/users/${userId}/services/${serviceId}`, { method: 'PUT', body: JSON.stringify(serviceData) });
 export const adminDeleteUserService = (userId: string, serviceId: string): Promise<{ message: string }> => apiFetch(`/api/admin/users/${userId}/services/${serviceId}`, { method: 'DELETE' });
 export const fetchAdminLiveChats = (): Promise<any[]> => apiFetch('/api/admin/live-chats');
 
@@ -187,3 +190,15 @@ export const deleteBlogPost = (id: string): Promise<{ message: string }> => apiF
 export const fetchPageBySlug = (slug: string): Promise<Page> => apiFetch(`/api/pages/${slug}`);
 export const fetchPublishedBlogPosts = (): Promise<BlogPost[]> => apiFetch('/api/blog');
 export const fetchBlogPostBySlug = (slug: string): Promise<BlogPost> => apiFetch(`/api/blog/${slug}`);
+
+// --- Feedback ---
+interface FeedbackData {
+  chatType: 'bot' | 'live_chat';
+  rating: number;
+  comment: string;
+  sessionId?: string;
+}
+export const submitChatFeedback = (feedbackData: FeedbackData): Promise<{ message: string }> => apiFetch('/api/feedback', { method: 'POST', body: JSON.stringify(feedbackData) });
+
+// --- Consultation ---
+export const requestConsultation = (data: { name: string, email: string, phone: string, message: string }): Promise<{ message: string }> => apiFetch('/api/consultations/request', { method: 'POST', body: JSON.stringify(data) });

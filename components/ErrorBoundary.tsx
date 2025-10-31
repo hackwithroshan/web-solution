@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import Button from './ui/Button';
 
@@ -10,11 +10,10 @@ interface State {
   hasError: boolean;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  // FIX: Refactored to use class property syntax for state and an arrow function for the event handler. This modern approach automatically binds `this` and resolves errors where `setState` and `props` were not found on the component instance.
-  public state: State = {
-    hasError: false,
-  };
+// FIX: Extended React.Component<Props, State> to make this a valid React class component.
+// This resolves errors where `this.setState` and `this.props` were not found because the class was not a component.
+class ErrorBoundary extends React.Component<Props, State> {
+  public state: State = { hasError: false };
 
   public static getDerivedStateFromError(_: Error): State {
     // Update state so the next render will show the fallback UI.
@@ -29,8 +28,7 @@ class ErrorBoundary extends Component<Props, State> {
   private handleGoHome = () => {
     // Reset state and navigate to home
     this.setState({ hasError: false });
-    window.location.hash = '/'; 
-    window.location.reload();
+    window.location.href = '/'; 
   }
 
   public render() {

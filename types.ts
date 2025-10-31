@@ -25,6 +25,11 @@ export interface ChatMessage {
   id: string;
   timestamp: string; // Added for displaying message time
   status?: 'sent' | 'delivered' | 'read'; // Added for message status indicators
+  attachment?: {
+    url: string;
+    name: string;
+    type: 'image' | 'file';
+  };
 }
 
 // Live Chat
@@ -77,6 +82,7 @@ export interface UserService {
   renewalDate: string;
   price: number;
   user: string; // User ID
+  domainName?: string;
 }
 
 export interface AdminService extends Omit<UserService, 'user'> {
@@ -136,7 +142,7 @@ export interface Payment {
   date: string;
   amount: number;
   status: 'completed' | 'pending' | 'failed';
-  order: Order; // Changed from string to Order for populated data
+  order: Order | null; // A payment might exist for a deleted order.
   transactionId: string;
 }
 
@@ -187,6 +193,7 @@ export interface ChatbotKnowledge {
 export interface CartItem {
     plan: ServicePlan;
     quantity: number;
+    domainName?: string;
 }
 
 export type OrderItemType = 'new_purchase' | 'renewal';
@@ -196,6 +203,8 @@ export interface OrderItem {
     service?: UserService; // For renewals
     itemType: OrderItemType;
     price: number;
+    // FIX: Add missing 'domainName' property to align with backend models and prevent type errors.
+    domainName?: string;
 }
 
 export interface Order {

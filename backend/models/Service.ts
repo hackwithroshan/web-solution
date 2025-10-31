@@ -8,6 +8,7 @@ export interface IService extends Document {
     startDate: Date;
     renewalDate: Date;
     price: number;
+    domainName?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -19,6 +20,7 @@ const serviceSchema = new mongoose.Schema<IService>({
         ref: 'User'
     },
     planName: { type: String, required: true },
+    domainName: { type: String },
     status: {
         type: String,
         required: true,

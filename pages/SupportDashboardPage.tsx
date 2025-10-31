@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import { Ticket, TicketStatus, TicketPriority, ChatMessage } from '../types';
 import { fetchAllTickets, fetchAdminLiveChats } from '../services/api';
-import AdminSidebar from '../components/AdminSidebar';
+import SupportSidebar from '../components/SupportSidebar';
 import DashboardHeader from '../components/DashboardHeader';
 import { Search, Inbox, Edit, CheckSquare, XCircle } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
@@ -74,9 +74,8 @@ const StatCard: React.FC<{ title: string; count: number; icon: React.ElementType
     </button>
 );
 
-
-const AdminSupportPage: React.FC = () => {
-    const { user: adminUser } = useAuth();
+const SupportDashboardPage: React.FC = () => {
+    const { user: supportUser } = useAuth();
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -150,7 +149,7 @@ const AdminSupportPage: React.FC = () => {
     }, [addToast]);
 
     const handleJoinChat = (sessionId: string) => {
-        socketRef.current?.emit('adminJoinsChat', { sessionId, adminUser });
+        socketRef.current?.emit('adminJoinsChat', { sessionId, adminUser: supportUser });
     };
 
     const ticketStats = useMemo(() => {
@@ -254,7 +253,7 @@ const AdminSupportPage: React.FC = () => {
     if (activeLiveSession) {
         return (
              <div className="flex h-screen bg-gray-100 font-sans">
-                <AdminSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+                <SupportSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
                 <div className="relative flex-1 flex flex-col overflow-hidden lg:ml-64">
                     <DashboardHeader onMenuClick={() => setIsSidebarOpen(true)} />
                     <main className="flex-1 flex flex-col bg-slate-50 p-6 lg:p-8">
@@ -282,12 +281,12 @@ const AdminSupportPage: React.FC = () => {
 
     return (
         <div className="flex h-screen bg-gray-100 font-sans">
-            <AdminSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+            <SupportSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
             <div className="relative flex-1 flex flex-col overflow-hidden lg:ml-64">
                 <DashboardHeader onMenuClick={() => setIsSidebarOpen(true)} />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-6 lg:p-8">
                     <div className="mb-6">
-                        <h1 className="text-2xl font-bold text-gray-800">Support Center</h1>
+                        <h1 className="text-2xl font-bold text-gray-800">Support Dashboard</h1>
                         <p className="mt-1 text-gray-600">Overview and management of all support tickets and live chats.</p>
                     </div>
 
@@ -345,4 +344,4 @@ const AdminSupportPage: React.FC = () => {
     );
 };
 
-export default AdminSupportPage;
+export default SupportDashboardPage;

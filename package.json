@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "gsap": "^3.12.5",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.400.0",
     "ogl": "^1.0.0-beta.23",
     "qrcode": "^1.5.3",

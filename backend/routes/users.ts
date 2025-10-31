@@ -131,11 +131,12 @@ router.post('/profile/2fa/generate', async (req: Request, res: Response, next: N
 // @route   POST /api/users/profile/2fa/enable
 router.post('/profile/2fa/enable', async (req: Request, res: Response, next: NextFunction) => {
     const { token } = req.body;
+
     try {
         if (!req.user) throw new ApiError(401, 'Not authorized');
 
         const user = await User.findById(req.user._id);
-        if (!user || !user.twoFactorSecret) throw new ApiError(400, '2FA not generated');
+        if (!user || !user.twoFactorSecret) throw new ApiError(400, '2FA secret not found. Please generate a secret first.');
 
         const verified = speakeasy.totp.verify({
             secret: user.twoFactorSecret,
@@ -143,18 +144,19 @@ router.post('/profile/2fa/enable', async (req: Request, res: Response, next: Nex
             token,
         });
 
-        if (verified) {
-            user.twoFactorEnabled = true;
-
-            // Generate recovery codes
-            const recoveryCodes = Array.from({ length: 10 }, () => crypto.randomBytes(4).toString('hex').toUpperCase());
-            user.twoFactorRecoveryCodes = recoveryCodes;
-
-            await user.save();
-            res.json({ recoveryCodes });
-        } else {
-            throw new ApiError(400, 'Invalid authentication code');
+        if (!verified) {
+            throw new ApiError(400, 'Invalid authentication code.');
         }
+
+        user.twoFactorEnabled = true;
+
+        // Generate recovery codes
+        const recoveryCodes = Array.from({ length: 10 }, () => crypto.randomBytes(4).toString('hex').toUpperCase());
+        user.twoFactorRecoveryCodes = recoveryCodes;
+
+        await user.save();
+
+        res.json({ recoveryCodes });
     } catch (error) {
         next(error);
     }
@@ -163,36 +165,76 @@ router.post('/profile/2fa/enable', async (req: Request, res: Response, next: Nex
 // @desc    Disable 2FA
 // @route   POST /api/users/profile/2fa/disable
 router.post('/profile/2fa/disable', async (req: Request, res: Response, next: NextFunction) => {
-    const { password, token } = req.body;
-     try {
+    try {
         if (!req.user) throw new ApiError(401, 'Not authorized');
 
+        const { password, token } = req.body;
         const user = await User.findById(req.user._id);
-        if (!user || !user.twoFactorSecret) throw new ApiError(400, '2FA is not enabled');
+
+        if (!user) throw new ApiError(404, 'User not found');
+        if (!user.twoFactorEnabled) throw new ApiError(400, '2FA is not enabled on this account.');
+        if (!user.twoFactorSecret) throw new ApiError(400, '2FA secret not found.');
 
         if (!(await user.matchPassword(password))) {
-            throw new ApiError(401, 'Invalid password');
+            throw new ApiError(401, 'Invalid password.');
         }
-
+        
         const verified = speakeasy.totp.verify({
             secret: user.twoFactorSecret,
             encoding: 'base32',
             token,
         });
-
-        if (verified) {
-            user.twoFactorEnabled = false;
-            user.twoFactorSecret = undefined;
-            user.twoFactorRecoveryCodes = [];
-            await user.save();
-            res.json({ message: 'Two-factor authentication has been disabled.' });
-        } else {
-            throw new ApiError(400, 'Invalid authentication code');
+        
+        if(!verified) {
+            throw new ApiError(401, 'Invalid authentication code.');
         }
+
+        user.twoFactorEnabled = false;
+        user.twoFactorSecret = undefined;
+        user.twoFactorRecoveryCodes = [];
+        await user.save();
+
+        res.json({ message: 'Two-factor authentication disabled successfully.' });
     } catch (error) {
         next(error);
     }
 });
 
+// @desc    Get a single service for the logged-in user
+// @route   GET /api/users/service/:id
+router.get('/service/:id', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (!req.user) throw new ApiError(401, 'Not authorized');
+
+        const service = await Service.findOne({ _id: req.params.id, user: req.user._id });
+        if (!service) throw new ApiError(404, 'Service not found or you do not have permission to view it.');
+
+        res.json(service);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// @desc    Cancel a service for the logged-in user
+// @route   PUT /api/users/service/:id/cancel
+router.put('/service/:id/cancel', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (!req.user) throw new ApiError(401, 'Not authorized');
+
+        const service = await Service.findOne({ _id: req.params.id, user: req.user._id });
+        if (!service) throw new ApiError(404, 'Service not found or you do not have permission to modify it.');
+
+        if (service.status === 'cancelled') {
+            throw new ApiError(400, 'Service is already cancelled.');
+        }
+
+        service.status = 'cancelled';
+        await service.save();
+
+        res.json({ message: 'Service cancelled successfully.' });
+    } catch (error) {
+        next(error);
+    }
+});
 
 export default router;

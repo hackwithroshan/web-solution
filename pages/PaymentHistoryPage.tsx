@@ -4,8 +4,9 @@ import DashboardHeader from '../components/DashboardHeader';
 import { useAuth } from '../hooks/useAuth';
 import { Payment } from '../types';
 import { fetchPaymentHistory } from '../services/api';
-import { Download } from 'lucide-react';
+import { Download, Loader } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import { generateInvoice } from '../utils/generateInvoice';
 
 // --- Skeleton Components for Loading State ---
 const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
@@ -57,6 +58,7 @@ const PaymentHistoryPage: React.FC = () => {
     const [payments, setPayments] = useState<Payment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
     const { addToast } = useToast();
 
     useEffect(() => {
@@ -75,6 +77,23 @@ const PaymentHistoryPage: React.FC = () => {
         // Simulate loading for demo purposes
         setTimeout(loadPayments, 1000);
     }, [user, addToast]);
+    
+    const handleDownloadInvoice = async (payment: Payment) => {
+        if (!user) {
+            addToast('User data not available.', 'error');
+            return;
+        }
+        setDownloadingId(payment._id);
+        try {
+            // Client-side PDF generation
+            await generateInvoice(payment, user);
+        } catch (error) {
+            addToast('Failed to generate invoice.', 'error');
+            console.error(error);
+        } finally {
+            setDownloadingId(null);
+        }
+    };
 
     const TableHeader = () => (
         <thead className="bg-gray-50">
@@ -115,8 +134,17 @@ const PaymentHistoryPage: React.FC = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm"><PaymentStatusBadge status={payment.status} /></td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{payment.transactionId}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                <button className="text-blue-600 hover:text-blue-800 flex items-center">
-                                                    <Download size={16} className="mr-1" /> PDF
+                                                <button 
+                                                  onClick={() => handleDownloadInvoice(payment)} 
+                                                  disabled={downloadingId === payment._id}
+                                                  className="text-blue-600 hover:text-blue-800 flex items-center disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    {downloadingId === payment._id ? (
+                                                        <Loader size={16} className="mr-1 animate-spin" />
+                                                    ) : (
+                                                        <Download size={16} className="mr-1" />
+                                                    )}
+                                                    PDF
                                                 </button>
                                             </td>
                                         </tr>

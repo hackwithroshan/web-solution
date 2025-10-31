@@ -57,7 +57,16 @@ const LoginPage: React.FC = () => {
   
   useEffect(() => {
     if (user) {
-        const redirectPath = from || (user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard');
+        let redirectPath = from;
+        if (!redirectPath) {
+            if (user.role === 'admin') {
+                redirectPath = '/admin/dashboard';
+            } else if (user.role === 'support') {
+                redirectPath = '/support/dashboard';
+            } else {
+                redirectPath = '/user/dashboard';
+            }
+        }
         navigate(redirectPath, { replace: true });
     }
   }, [user, navigate, from]);

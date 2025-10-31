@@ -1,16 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { HelpCircle, X } from 'lucide-react';
-import ChatWindow from './ChatWindow';
+import ChatWindow, { ChatWindowRef } from './ChatWindow';
 
 const ChatWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const chatWindowRef = useRef<ChatWindowRef>(null);
 
-  const toggleChat = () => setIsOpen(!isOpen);
+  const toggleChat = () => {
+    if (isOpen) {
+      // Defer closing to the ChatWindow to handle confirmation logic
+      chatWindowRef.current?.handleCloseAttempt();
+    } else {
+      setIsOpen(true);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      {isOpen && <ChatWindow onClose={toggleChat} />}
-      <div className="absolute bottom-5 right-5 pointer-events-auto">
+      {isOpen && <ChatWindow ref={chatWindowRef} onClose={() => setIsOpen(false)} />}
+      <div className="absolute bottom-4 right-4 pointer-events-auto">
         <button
           onClick={toggleChat}
           className="bg-gray-900 text-white rounded-full px-5 py-3 shadow-lg hover:bg-black transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:ring-offset-2 flex items-center gap-2"

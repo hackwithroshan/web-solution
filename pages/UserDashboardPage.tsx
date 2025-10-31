@@ -4,11 +4,12 @@ import DashboardHeader from '../components/DashboardHeader';
 import { useAuth } from '../hooks/useAuth';
 import { UserService } from '../types';
 import { fetchUserServices, fetchPublicKeys, createBulkRenewalOrder, verifyBulkRenewalPayment } from '../services/api';
-import { Server, CheckCircle, Clock, Star, ChevronRight, HelpCircle, Settings, BarChart2, Briefcase, AlertTriangle, RefreshCw, Loader } from 'lucide-react';
+import { Server, CheckCircle, Clock, Star, ChevronRight, HelpCircle, Settings, BarChart2, Briefcase, AlertTriangle, RefreshCw, Loader, Sparkles } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import Button from '../components/ui/Button';
 import { Link, useNavigate } from 'react-router-dom';
 import BulkRenewal from '../components/BulkRenewal';
+import UserServicesCard from '../components/UserServicesCard';
 
 interface RazorpayOptions {
   key: string;
@@ -54,14 +55,22 @@ const StatCardSkeleton: React.FC = () => (
     </div>
 );
 
-const TableRowSkeleton: React.FC = () => (
-    <tr>
-        <td className="px-6 py-4 whitespace-nowrap"><Skeleton className="h-5 w-32 rounded" /></td>
-        <td className="px-6 py-4 whitespace-nowrap"><Skeleton className="h-5 w-24 rounded" /></td>
-        <td className="px-6 py-4 whitespace-nowrap"><Skeleton className="h-5 w-16 rounded" /></td>
-        <td className="px-6 py-4 whitespace-nowrap"><Skeleton className="h-5 w-28 rounded" /></td>
-    </tr>
+const ServiceCardSkeleton: React.FC = () => (
+    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200/80">
+        <div className="flex justify-between items-start">
+            <Skeleton className="w-12 h-12 rounded-lg" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
+        <Skeleton className="h-5 w-1/2 mt-4 rounded" />
+        <Skeleton className="h-4 w-1/3 mt-2 rounded" />
+        <div className="border-t my-4"></div>
+        <div className="flex justify-between items-center">
+             <Skeleton className="h-4 w-1/4 rounded" />
+             <Skeleton className="h-8 w-24 rounded-full" />
+        </div>
+    </div>
 );
+
 
 const ExpiredServicesRenewal: React.FC<{ services: UserService[]; onSuccessfulRenewal: () => void; }> = ({ services, onSuccessfulRenewal }) => {
     const [selectedServices, setSelectedServices] = useState<string[]>(services.map(s => s._id)); // Auto-select all expired
@@ -259,34 +268,6 @@ const UserDashboardPage: React.FC = () => {
         // Function to refresh data after a successful renewal
        loadServices();
     };
-    
-    const calculateTimeRemaining = (dateString: string) => {
-        const renewalDate = new Date(dateString);
-        const now = new Date();
-        // Set time to 0 to compare dates only
-        renewalDate.setHours(0, 0, 0, 0);
-        now.setHours(0, 0, 0, 0);
-
-        const diffTime = renewalDate.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 0) {
-            return { text: `Expired ${Math.abs(diffDays)} days ago`, color: 'text-red-600 font-bold' };
-        }
-        if (diffDays === 0) {
-            return { text: 'Expires today', color: 'text-red-600 font-bold' };
-        }
-        if (diffDays === 1) {
-            return { text: 'Expires tomorrow', color: 'text-red-600 font-semibold' };
-        }
-        if (diffDays <= 7) {
-            return { text: `Expires in ${diffDays} days`, color: 'text-red-500 font-semibold' };
-        }
-        if (diffDays <= 30) {
-            return { text: `Expires in ${diffDays} days`, color: 'text-yellow-600' };
-        }
-        return { text: `Expires in ${diffDays} days`, color: 'text-gray-600' };
-    };
 
 
     return (
@@ -315,18 +296,15 @@ const UserDashboardPage: React.FC = () => {
                                     <StatCardSkeleton />
                                     <StatCardSkeleton />
                                 </div>
-                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                    <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    <div className="lg:col-span-2">
                                         <Skeleton className="h-6 w-1/3 mb-4 rounded" />
-                                        <table className="min-w-full">
-                                            <tbody>
-                                                <TableRowSkeleton />
-                                                <TableRowSkeleton />
-                                                <TableRowSkeleton />
-                                            </tbody>
-                                        </table>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <ServiceCardSkeleton />
+                                            <ServiceCardSkeleton />
+                                        </div>
                                     </div>
-                                     <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm">
+                                    <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm">
                                          <Skeleton className="h-6 w-1/2 mb-6 rounded" />
                                          <div className="space-y-4">
                                              <Skeleton className="h-12 w-full rounded" />
@@ -359,60 +337,48 @@ const UserDashboardPage: React.FC = () => {
         
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                    <div className="lg:col-span-2">
-                                        <div className="bg-white p-6 rounded-xl shadow-sm h-full flex flex-col">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <h2 className="text-lg font-bold text-gray-800">Your Active Services</h2>
-                                                <Button variant="secondary" onClick={() => navigate('/user/all-services')} className="!text-sm !py-1 !px-3 !bg-transparent !text-blue-600 hover:!bg-blue-50 !font-semibold !shadow-none">
-                                                    + Add Service
-                                                </Button>
-                                            </div>
-                                            <div className="flex-grow">
-                                                {activeUserServices.length > 0 ? (
-                                                    <div className="overflow-x-auto">
-                                                        <table className="min-w-full divide-y divide-gray-200">
-                                                            <thead className="bg-gray-50">
-                                                                <tr>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Name</th>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Renewal Date</th>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Remaining</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody className="bg-white divide-y divide-gray-200">
-                                                                {activeUserServices.slice(0, 5).map(service => {
-                                                                    const timeRemaining = calculateTimeRemaining(service.renewalDate);
-                                                                    return (
-                                                                        <tr key={service._id}>
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{service.planName}</td>
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(service.renewalDate).toLocaleDateString()}</td>
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{service.price}</td>
-                                                                            <td className={`px-6 py-4 whitespace-nowrap text-sm ${timeRemaining.color}`}>{timeRemaining.text}</td>
-                                                                        </tr>
-                                                                    );
-                                                                })}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                ) : (
-                                                    <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-200 rounded-lg">
-                                                        <div className="text-center py-10 px-4">
-                                                            <Server className="mx-auto h-12 w-12 text-gray-300" />
-                                                            <h3 className="mt-2 text-lg font-medium text-gray-900">No active services yet</h3>
-                                                            <p className="mt-1 text-sm text-gray-500 max-w-sm">It looks like you haven't purchased any services. Get started by exploring our service catalog.</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h2 className="text-lg font-bold text-gray-800">Your Active Services</h2>
+                                            <Button variant="secondary" onClick={() => navigate('/user/all-services')} className="!text-sm !py-1 !px-3 !bg-transparent !text-blue-600 hover:!bg-blue-50 !font-semibold !shadow-none">
+                                                + Add Service
+                                            </Button>
                                         </div>
+                                        {activeUserServices.length > 0 ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                {activeUserServices.map(service => (
+                                                    <UserServicesCard key={service._id} service={service} />
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-200 rounded-lg bg-white">
+                                                <div className="text-center py-10 px-4">
+                                                    <Server className="mx-auto h-12 w-12 text-gray-300" />
+                                                    <h3 className="mt-2 text-lg font-medium text-gray-900">No active services yet</h3>
+                                                    <p className="mt-1 text-sm text-gray-500 max-w-sm">It looks like you haven't purchased any services. Get started by exploring our service catalog.</p>
+                                                     <Button onClick={() => navigate('/user/all-services')} className="mt-6">
+                                                        Explore Services
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
                                    </div>
-                                   <div className="lg:col-span-1">
-                                        <div className="bg-white p-6 rounded-xl shadow-sm h-full">
+                                   <div className="lg:col-span-1 space-y-8">
+                                        <div className="bg-white p-6 rounded-xl shadow-sm">
                                             <h2 className="text-lg font-bold text-gray-800 mb-4">Quick Actions</h2>
                                             <div className="space-y-2">
+                                                <QuickActionItem icon={Server} title="My Services" subtitle="View and manage all services" to="/user/my-services" />
                                                 <QuickActionItem icon={BarChart2} title="Payment History" subtitle="View all transactions" to="/user/payment-history" />
                                                 <QuickActionItem icon={HelpCircle} title="Support Tickets" subtitle="Get help & support" to="/user/support" />
                                                 <QuickActionItem icon={Settings} title="Account Settings" subtitle="Manage your profile" to="/user/profile" />
                                             </div>
+                                        </div>
+                                        <div className="bg-gradient-to-br from-blue-600 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+                                            <Sparkles className="w-8 h-8 opacity-80 mb-3" />
+                                            <h3 className="text-lg font-bold">Ready for Your Next Project?</h3>
+                                            <p className="text-sm opacity-90 mt-1 mb-4">Explore our full range of services, from high-performance hosting to custom AI solutions.</p>
+                                            <Button onClick={() => navigate('/user/all-services')} className="!bg-white !text-blue-600 hover:!bg-gray-100 w-full">
+                                                View All Services
+                                            </Button>
                                         </div>
                                    </div>
                                 </div>

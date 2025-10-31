@@ -35,7 +35,7 @@ const Header: React.FC = () => {
 
   const navItems = NAV_LINKS.map(link => ({
     label: link.name,
-    href: `#${link.path}` // for HashRouter
+    href: link.path
   }));
 
   const MobileMenu = () => (
@@ -94,7 +94,6 @@ const Header: React.FC = () => {
             </Link>
             <div className="hidden md:flex items-center">
               <GooeyNav
-                key={location.pathname} // Remount on navigation to update active state
                 items={navItems}
                 initialActiveIndex={activeIndex}
               />

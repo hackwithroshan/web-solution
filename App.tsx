@@ -1,5 +1,5 @@
 import React, { useEffect, lazy, Suspense } from 'react';
-import { HashRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -26,6 +26,7 @@ const ContactUsPage = lazy(() => import('./pages/ContactUsPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
+const SupportDashboardPage = lazy(() => import('./pages/SupportDashboardPage')); // New Support Dashboard
 const RegistrationPage = lazy(() => import('./pages/RegistrationPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
@@ -51,11 +52,14 @@ const AdminManageChatbotPage = lazy(() => import('./pages/AdminManageChatbotPage
 const WebsitePerformancePage = lazy(() => import('./pages/WebsitePerformancePage'));
 const AdminManagePagesPage = lazy(() => import('./pages/AdminManagePagesPage'));
 const AdminManageBlogPage = lazy(() => import('./pages/AdminManageBlogPage'));
+const UserManageServicePage = lazy(() => import('./pages/UserManageServicePage'));
+const MyServicesPage = lazy(() => import('./pages/MyServicesPage'));
+
 
 const AppContent: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const isDashboardRoute = location.pathname.startsWith('/user/') || location.pathname.startsWith('/admin/');
+  const isDashboardRoute = location.pathname.startsWith('/user/') || location.pathname.startsWith('/admin/') || location.pathname.startsWith('/support/');
   
   // Add a global listener for authorization errors from the API service
   useEffect(() => {
@@ -97,6 +101,22 @@ const AppContent: React.FC = () => {
               element={
                 <ProtectedRoute allowedRoles={['user']}>
                   <UserDashboardPage />
+                </ProtectedRoute>
+              } 
+            />
+             <Route 
+              path="/user/service/:id" 
+              element={
+                <ProtectedRoute allowedRoles={['user']}>
+                  <UserManageServicePage />
+                </ProtectedRoute>
+              } 
+            />
+             <Route 
+              path="/user/my-services" 
+              element={
+                <ProtectedRoute allowedRoles={['user']}>
+                  <MyServicesPage />
                 </ProtectedRoute>
               } 
             />
@@ -255,7 +275,7 @@ const AppContent: React.FC = () => {
             <Route 
               path="/admin/support" 
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'support']}>
                   <AdminSupportPage />
                 </ProtectedRoute>
               } 
@@ -263,8 +283,16 @@ const AppContent: React.FC = () => {
             <Route 
               path="/admin/support/:id" 
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'support']}>
                   <AdminTicketViewPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/support/dashboard" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'support']}>
+                  <SupportDashboardPage />
                 </ProtectedRoute>
               } 
             />
@@ -282,13 +310,12 @@ function App() {
     <ToastProvider>
       <AuthProvider>
         <CartProvider>
-          <HashRouter>
+          <BrowserRouter>
             <NetworkStatusBanner />
-            {/* FIX: The error "Property 'children' is missing" was a cascading error from the broken ErrorBoundary component. Fixing ErrorBoundary resolves this issue without any changes to this file's code. */}
             <ErrorBoundary>
               <AppContent />
             </ErrorBoundary>
-          </HashRouter>
+          </BrowserRouter>
         </CartProvider>
       </AuthProvider>
     </ToastProvider>

@@ -130,6 +130,21 @@
         animation: typing-bounce 1.4s infinite ease-in-out;
       }
       
+      /* New animation for typing indicator appearance */
+      @keyframes fade-in-up-fast {
+        from {
+          transform: translateY(10px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .animate-fade-in-up-fast {
+        animation: fade-in-up-fast 0.3s ease-out forwards;
+      }
+      
       /* --- Testimonial Scroller --- */
       @keyframes scroll-left {
         to {
@@ -262,7 +277,9 @@
     "node-fetch": "https://aistudiocdn.com/node-fetch@^3.3.2",
     "nodemailer": "https://aistudiocdn.com/nodemailer@^7.0.9",
     "gsap": "https://aistudiocdn.com/gsap@^3.13.0",
-    "ogl": "https://aistudiocdn.com/ogl@^1.0.11"
+    "ogl": "https://aistudiocdn.com/ogl@^1.0.11",
+    "jspdf": "https://aistudiocdn.com/jspdf@^2.5.1",
+    "jspdf-autotable": "https://aistudiocdn.com/jspdf-autotable@^3.8.2"
   }
 }
 </script>

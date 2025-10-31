@@ -10,6 +10,7 @@ export interface IOrderItem {
     service?: mongoose.Types.ObjectId | IService;
     itemType: OrderItemType;
     price: number;
+    domainName?: string;
 }
 
 export interface IOrder extends Document {
@@ -25,6 +26,7 @@ const OrderItemSchema: Schema = new Schema({
     service: { type: Schema.Types.ObjectId, ref: 'Service' },
     itemType: { type: String, enum: ['new_purchase', 'renewal'], required: true },
     price: { type: Number, required: true },
+    domainName: { type: String },
 });
 
 const OrderSchema: Schema = new Schema({

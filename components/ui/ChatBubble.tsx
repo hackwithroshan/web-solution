@@ -34,7 +34,17 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ message, isOwn, showAvatar }) =
       )}
       <div className={`max-w-[80%] flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
         <div className={`p-3 rounded-lg ${bubbleClasses}`}>
-          <p className="text-sm" style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>{message.text}</p>
+          {message.attachment && message.attachment.type === 'image' && (
+            <img 
+              src={message.attachment.url} 
+              alt={message.attachment.name} 
+              className="rounded-md max-w-xs mb-2 cursor-pointer" 
+              onClick={() => window.open(message.attachment.url, '_blank')}
+            />
+          )}
+          {message.text && (
+            <p className="text-sm" style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>{message.text}</p>
+          )}
         </div>
         <div className="flex items-center gap-1.5 mt-1 px-1">
           <span className="text-xs text-gray-400">{formatTimestamp(message.timestamp)}</span>

@@ -9,14 +9,14 @@ const publicRouter = express.Router();
 // Admin Routes
 adminRouter.use(protect, admin);
 
-adminRouter.get('/', async (req, res, next) => {
+adminRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const posts = await BlogPost.find({}).sort({ createdAt: -1 }).populate('author', 'name');
         res.json(posts);
     } catch (error) { next(error); }
 });
 
-adminRouter.post('/', async (req, res, next) => {
+adminRouter.post('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
         if(!req.user) throw new ApiError(401, 'Not Authorized');
         const post = new BlogPost({ ...req.body, author: req.user._id });
@@ -25,7 +25,7 @@ adminRouter.post('/', async (req, res, next) => {
     } catch (error) { next(error); }
 });
 
-adminRouter.put('/:id', async (req, res, next) => {
+adminRouter.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const post = await BlogPost.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!post) throw new ApiError(404, 'Blog post not found');
@@ -33,7 +33,7 @@ adminRouter.put('/:id', async (req, res, next) => {
     } catch (error) { next(error); }
 });
 
-adminRouter.delete('/:id', async (req, res, next) => {
+adminRouter.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const post = await BlogPost.findByIdAndDelete(req.params.id);
         if (!post) throw new ApiError(404, 'Blog post not found');
@@ -43,14 +43,14 @@ adminRouter.delete('/:id', async (req, res, next) => {
 
 
 // Public Routes
-publicRouter.get('/', async (req, res, next) => {
+publicRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const posts = await BlogPost.find({ status: 'published' }).sort({ createdAt: -1 }).populate('author', 'name');
         res.json(posts);
     } catch (error) { next(error); }
 });
 
-publicRouter.get('/:slug', async (req, res, next) => {
+publicRouter.get('/:slug', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const post = await BlogPost.findOne({ slug: req.params.slug, status: 'published' }).populate('author', 'name');
         if (!post) throw new ApiError(404, 'Blog post not found');

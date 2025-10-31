@@ -29,7 +29,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
   //    redirect them to their respective dashboard, providing a better user experience
   //    than redirecting to the public home page.
   if (!allowedRoles.includes(user.role)) {
-    const dashboardPath = user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard';
+    let dashboardPath = '/user/dashboard';
+    if (user.role === 'admin') {
+        dashboardPath = '/admin/dashboard';
+    } else if (user.role === 'support') {
+        dashboardPath = '/support/dashboard';
+    }
     return <Navigate to={dashboardPath} replace />;
   }
   

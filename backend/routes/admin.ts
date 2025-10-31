@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { protect, admin } from '../middleware/auth.js';
+import { protect, admin, support } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Service from '../models/Service.js';
 import Ticket from '../models/Ticket.js';
@@ -11,9 +11,6 @@ import ChatbotKnowledge from '../models/ChatbotKnowledge.js';
 import LiveChatSession from '../models/LiveChatSession.js';
 
 const router = express.Router();
-
-// All routes in this file are protected and for admins only
-router.use(protect, admin);
 
 // Helper function to format aggregated monthly data for the last 6 months
 const processMonthlyData = (aggResult: any[], dataKey: 'count' | 'total') => {
@@ -38,6 +35,27 @@ const processMonthlyData = (aggResult: any[], dataKey: 'count' | 'total') => {
     }
     return result;
 };
+
+
+// --- SUPPORT & ADMIN ACCESSIBLE ROUTES ---
+// This route is defined first with its specific 'support' middleware.
+// @desc    Get active and waiting live chat sessions
+// @route   GET /api/admin/live-chats
+router.get('/live-chats', protect, support, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const chats = await LiveChatSession.find({ status: { $in: ['waiting', 'active'] } })
+            .select('user createdAt adminSocketId')
+            .sort({ createdAt: 1 });
+        res.json(chats);
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+// --- ADMIN ONLY ROUTES ---
+// All subsequent routes in this file are protected and for admins only
+router.use(protect, admin);
 
 
 // @desc    Get admin dashboard stats
@@ -102,19 +120,6 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
             ticketStats,
             recentActivities
         });
-    } catch (error) {
-        next(error);
-    }
-});
-
-// @desc    Get active live chat sessions
-// @route   GET /api/admin/live-chats
-router.get('/live-chats', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const chats = await LiveChatSession.find({ status: 'active' })
-            .select('user createdAt adminSocketId')
-            .sort({ createdAt: 1 });
-        res.json(chats);
     } catch (error) {
         next(error);
     }
@@ -221,6 +226,34 @@ router.post('/users/:id/services', async (req: Request, res: Response, next: Nex
         const service = new Service({ ...req.body, user: user._id });
         const createdService = await service.save();
         res.status(201).json(createdService);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// @desc    Update a user's service
+// @route   PUT /api/admin/users/:userId/services/:serviceId
+router.put('/users/:userId/services/:serviceId', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { planName, renewalDate, price, status, domainName } = req.body;
+        const service = await Service.findOne({ _id: req.params.serviceId, user: req.params.userId });
+
+        if (!service) {
+            throw new ApiError(404, 'Service not found for this user');
+        }
+
+        service.planName = planName ?? service.planName;
+        service.renewalDate = renewalDate ? new Date(renewalDate) : service.renewalDate;
+        service.price = price ?? service.price;
+        service.status = status ?? service.status;
+        
+        if (domainName !== undefined) {
+             service.domainName = domainName;
+        }
+
+        const updatedService = await service.save();
+        res.json(updatedService);
+
     } catch (error) {
         next(error);
     }

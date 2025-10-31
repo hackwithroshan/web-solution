@@ -368,33 +368,25 @@ export const LogoLoop: React.FC<LogoLoopProps> = memo(
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        {fadeOut && (
-          <>
-            <div
-              aria-hidden
-              className={cx(
-                'pointer-events-none absolute inset-y-0 left-0 z-[1]',
-                'w-[clamp(24px,8%,120px)]',
-                'bg-[linear-gradient(to_right,var(--logoloop-fadeColor,var(--logoloop-fadeColorAuto))_0%,rgba(0,0,0,0)_100%)]'
-              )}
-            />
-            <div
-              aria-hidden
-              className={cx(
-                'pointer-events-none absolute inset-y-0 right-0 z-[1]',
-                'w-[clamp(24px,8%,120px)]',
-                'bg-[linear-gradient(to_left,var(--logoloop-fadeColor,var(--logoloop-fadeColorAuto))_0%,rgba(0,0,0,0)_100%)]'
-              )}
-            />
-          </>
-        )}
-
         <div
-          className={cx('flex w-max will-change-transform select-none', 'motion-reduce:transform-none')}
           ref={trackRef}
+          className="flex items-center will-change-transform"
+          style={{ willChange: 'transform' }}
         >
           {logoLists}
         </div>
+        {fadeOut && (
+          <>
+            <div
+              className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--logoloop-fadeColor,var(--logoloop-fadeColorAuto))] to-transparent pointer-events-none"
+              aria-hidden
+            />
+            <div
+              className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--logoloop-fadeColor,var(--logoloop-fadeColorAuto))] to-transparent pointer-events-none"
+              aria-hidden
+            />
+          </>
+        )}
       </div>
     );
   }

@@ -15,18 +15,21 @@ const AdminLoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login(email, password);
+    await login(email, password).catch(() => {
+        // Catch login errors to prevent unhandled promise rejections.
+        // The error toast is already handled by the useAuth hook.
+    });
   };
   
   // Effect to navigate after any login attempt or if a user is already logged in
   useEffect(() => {
     if (user) {
       if (user.role === 'admin') {
-        // If the logged-in user is an admin, redirect to the admin dashboard.
         navigate('/admin/dashboard', { replace: true });
+      } else if (user.role === 'support') {
+        navigate('/support/dashboard', { replace: true });
       } else {
-        // If a non-admin user logs in or is already logged in on this page,
-        // redirect them to their dashboard and show an error.
+        // A regular user is trying to access the admin portal.
         addToast("You are not authorized to access the admin portal.", "error");
         navigate('/user/dashboard', { replace: true });
       }

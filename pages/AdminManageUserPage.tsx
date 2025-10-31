@@ -1,14 +1,95 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { User, UserService, UserRole, ServicePlan } from '../types';
-import { fetchUserById, updateUser, adminFetchUserServices, adminAddServiceToUser, adminDeleteUserService, fetchAdminServicePlans } from '../services/api';
+import { fetchUserById, updateUser, adminFetchUserServices, adminAddServiceToUser, adminDeleteUserService, fetchAdminServicePlans, adminUpdateUserService } from '../services/api';
 import AdminSidebar from '../components/AdminSidebar';
 import DashboardHeader from '../components/DashboardHeader';
-import { Loader, ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { Loader, ArrowLeft, Plus, Trash2, Edit, X } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+
+interface EditServiceModalProps {
+    service: UserService;
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (serviceId: string, data: any) => Promise<void>;
+}
+
+const EditServiceModal: React.FC<EditServiceModalProps> = ({ service, isOpen, onClose, onSave }) => {
+    const [formData, setFormData] = useState({
+        planName: service.planName,
+        renewalDate: new Date(service.renewalDate).toISOString().split('T')[0],
+        price: service.price,
+        status: service.status,
+        domainName: service.domainName || ''
+    });
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        setFormData({
+            planName: service.planName,
+            renewalDate: new Date(service.renewalDate).toISOString().split('T')[0],
+            price: service.price,
+            status: service.status,
+            domainName: service.domainName || ''
+        });
+    }, [service]);
+
+    const isDomainService = service.planName.toLowerCase().includes('domain');
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        await onSave(service._id, formData);
+        setIsSaving(false);
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-lg w-full max-w-lg relative animate-slide-in-up">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X size={24} /></button>
+                <h3 className="text-lg font-bold p-6 border-b">Edit Service</h3>
+                <form onSubmit={handleSubmit}>
+                    <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                        <Input label="Plan Name" name="planName" value={formData.planName} onChange={handleChange} variant="light" required />
+                        {isDomainService && (
+                            <Input label="Domain Name" name="domainName" value={formData.domainName} onChange={handleChange} variant="light" placeholder="e.g., example.com" />
+                        )}
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input label="Price (₹)" name="price" type="number" value={formData.price} onChange={handleChange} variant="light" required />
+                            <Input label="Renewal Date" name="renewalDate" type="date" value={formData.renewalDate} onChange={handleChange} variant="light" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-black">
+                                <option value="active">Active</option>
+                                <option value="pending">Pending</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-b-xl flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+                        <Button type="submit" disabled={isSaving}>
+                            {isSaving ? <Loader className="animate-spin h-5 w-5" /> : 'Save Changes'}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 
 const AdminManageUserPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -25,6 +106,7 @@ const AdminManageUserPage: React.FC = () => {
     const [userData, setUserData] = useState({ name: '', email: '', role: 'user' as UserRole, status: 'active' as 'active' | 'inactive' });
     const [showAddService, setShowAddService] = useState(false);
     const [newServiceData, setNewServiceData] = useState({ planId: '', renewalDate: ''});
+    const [editingService, setEditingService] = useState<UserService | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -107,6 +189,20 @@ const AdminManageUserPage: React.FC = () => {
         }
     };
 
+    const handleSaveService = async (serviceId: string, data: any) => {
+        if (!id) return;
+        try {
+            const updateData = { ...data, price: Number(data.price) };
+            await adminUpdateUserService(id, serviceId, updateData);
+            addToast('Service updated successfully!', 'success');
+            const updatedServices = await adminFetchUserServices(id);
+            setServices(updatedServices);
+            setEditingService(null); // Close modal
+        } catch (err: any) {
+            addToast(err.message || 'Failed to update service', 'error');
+        }
+    };
+
     if (isLoading) return <div className="flex justify-center items-center h-screen"><Loader className="w-12 h-12 animate-spin text-cyan-600" /></div>;
 
     return (
@@ -174,20 +270,38 @@ const AdminManageUserPage: React.FC = () => {
                                 </form>
                             )}
                             <div className="space-y-3">
-                                {services.length > 0 ? services.map(service => (
+                                {services.length > 0 ? services.map(service => {
+                                    const isDomainService = service.planName.toLowerCase().includes('domain');
+                                    return (
                                     <div key={service._id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
                                         <div>
-                                            <p className="font-semibold text-gray-800">{service.planName}</p>
+                                            {isDomainService && service.domainName ? (
+                                                <a href={`https://${service.domainName.replace(/^(https?:\/\/)/, '')}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-blue-600 hover:underline">{service.planName} ({service.domainName})</a>
+                                            ) : (
+                                                <p className="font-semibold text-gray-800">{service.planName}</p>
+                                            )}
                                             <p className="text-sm text-gray-500">Renews on {new Date(service.renewalDate).toLocaleDateString()} for ₹{service.price}</p>
                                         </div>
-                                        <button onClick={() => handleDeleteService(service._id)} className="text-red-500 hover:text-red-700"><Trash2 size={18}/></button>
+                                        <div className="flex items-center gap-4">
+                                            <button onClick={() => setEditingService(service)} className="text-cyan-600 hover:text-cyan-800"><Edit size={18}/></button>
+                                            <button onClick={() => handleDeleteService(service._id)} className="text-red-500 hover:text-red-700"><Trash2 size={18}/></button>
+                                        </div>
                                     </div>
-                                )) : <p className="text-center text-gray-500 py-4">This user has no services.</p>}
+                                    )
+                                }) : <p className="text-center text-gray-500 py-4">This user has no services.</p>}
                             </div>
                         </div>
                     </div>
                 </main>
             </div>
+            {editingService && (
+                <EditServiceModal 
+                    service={editingService}
+                    isOpen={!!editingService}
+                    onClose={() => setEditingService(null)}
+                    onSave={handleSaveService}
+                />
+            )}
         </div>
     );
 };

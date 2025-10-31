@@ -56,3 +56,11 @@ export const admin = (req: Request, res: Response, next: NextFunction) => {
         next(new ApiError(403, 'Not authorized as an admin'));
     }
 };
+
+export const support = (req: Request, res: Response, next: NextFunction) => {
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'support')) {
+        next();
+    } else {
+        next(new ApiError(403, 'Not authorized for this resource'));
+    }
+};

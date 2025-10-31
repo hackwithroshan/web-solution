@@ -28,8 +28,11 @@
       "dest": "/backend/index.ts"
     },
     {
-      "src": "/((?!api/|uploads/|socket.io/).*)",
-      "dest": "/$1"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }

@@ -27,6 +27,8 @@ import announcementRoutes from './routes/announcements.js';
 import performanceRoutes from './routes/performance.js';
 import { adminPageRouter, publicPageRouter } from './routes/pages.js';
 import { adminBlogRouter, publicBlogRouter } from './routes/blog.js';
+import feedbackRoutes from './routes/feedback.js';
+import consultationRoutes from './routes/consultations.js';
 
 
 const PORT = process.env.PORT || 3001;
@@ -43,7 +45,8 @@ const io = new Server(httpServer, {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+// FIX: Add explicit types to middleware to fix overload error.
+app.use(express.json() as (req: Request, res: Response, next: NextFunction) => void);
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -63,6 +66,8 @@ app.use('/api/admin/pages', adminPageRouter);
 app.use('/api/pages', publicPageRouter);
 app.use('/api/admin/blog', adminBlogRouter);
 app.use('/api/blog', publicBlogRouter);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/consultations', consultationRoutes);
 
 
 // Socket.IO Connection Handling
@@ -78,25 +83,31 @@ io.on('connection', (socket) => {
     socket.to(ticketId).emit('newMessage', message);
   });
 
-  // --- MODIFIED Live Chat Logic ---
+  // --- Live Chat Logic ---
+  socket.on('adminJoinSupport', () => {
+    socket.join('admin_support_room');
+    logger.info(`Socket ${socket.id} joined admin support room.`);
+  });
+
   socket.on('requestLiveChat', async ({ user, history }, callback) => {
     try {
         logger.info(`User ${user.name} requesting live chat.`);
         
+        // Find an existing session for this user that is still waiting for an admin
         let session = await LiveChatSession.findOne({ 
             'user._id': user._id, 
-            status: 'active',
-            adminSocketId: { $exists: false } 
+            status: 'waiting',
         });
 
         if (!session) {
+             // If no waiting session, create a new one. Status will default to 'waiting'.
              session = await LiveChatSession.create({
                 user: { _id: user._id, name: user.name },
                 userSocketId: socket.id,
                 history,
-                status: 'active', // Status is 'active' immediately
             });
         } else {
+            // If a waiting session exists, just update the socket ID for the reconnecting user
             session.userSocketId = socket.id;
             await session.save();
         }
@@ -105,10 +116,14 @@ io.on('connection', (socket) => {
             id: session._id.toString(),
             user: session.user,
             history: session.history,
-            adminSocketId: session.adminSocketId
+            adminSocketId: session.adminSocketId,
+            createdAt: session.createdAt,
         };
 
         socket.join(sessionData.id);
+
+        // Notify admins about the new/updated waiting chat request
+        io.to('admin_support_room').emit('newLiveChatRequest', { ...sessionData, _id: sessionData.id });
 
         if (callback && typeof callback === 'function') {
             callback(sessionData);
@@ -123,18 +138,22 @@ io.on('connection', (socket) => {
     try {
         const session = await LiveChatSession.findById(sessionId);
 
-        if (!session || session.status !== 'active') {
-            logger.warn(`Admin ${socket.id} tried to join a non-existent or inactive session ${sessionId}.`);
-            socket.emit('chatSessionEnded');
+        // Admin should only join a session that is currently 'waiting'
+        if (!session || session.status !== 'waiting') {
+            logger.warn(`Admin ${socket.id} tried to join a non-existent or non-waiting session ${sessionId}.`);
+            // Maybe the user disconnected or another admin joined. Inform this admin.
+            socket.emit('chatSessionEnded'); 
             return;
         }
 
         if (session.adminSocketId) {
             logger.warn(`Admin ${socket.id} tried to join an already assigned session ${sessionId}.`);
-            return;
+            return; // Maybe emit an error message to this admin
         }
 
+        // Update session: assign admin and change status to 'active'
         session.adminSocketId = socket.id;
+        session.status = 'active';
         
         const agentName = adminUser && adminUser.role === 'admin' ? 'Roshan pandey' : adminUser?.name || 'a support agent';
 
@@ -149,6 +168,7 @@ io.on('connection', (socket) => {
         await session.save();
         socket.join(sessionId);
 
+        // Notify user that an agent has joined
         io.to(session.userSocketId).emit('liveChatMessage', systemMessage);
         
         const adminSystemMessage = {
@@ -162,7 +182,10 @@ io.on('connection', (socket) => {
             history: [...session.history.slice(0, -1), adminSystemMessage]
         };
         
+        // Send the full session data to the joining admin
         io.to(socket.id).emit('chatSessionStarted', sessionDataForAdmin);
+        // Notify all other admins that this chat is now taken
+        io.to('admin_support_room').emit('chatSessionTaken', { sessionId, adminName: agentName });
         
         logger.info(`Admin ${adminUser?.name} (${socket.id}) joined chat with user ${session.userSocketId}. Session: ${sessionId}`);
     } catch (error) {
@@ -199,6 +222,7 @@ io.on('connection', (socket) => {
         const session = await LiveChatSession.findByIdAndUpdate(sessionId, { status: 'closed' });
         if (session) {
             io.to(sessionId).emit('chatSessionEnded');
+            io.to('admin_support_room').emit('chatSessionClosed', sessionId);
             io.sockets.sockets.get(session.userSocketId)?.leave(sessionId);
             if(session.adminSocketId) {
                 io.sockets.sockets.get(session.adminSocketId)?.leave(sessionId);
@@ -238,6 +262,7 @@ io.on('connection', (socket) => {
                  io.to(otherSocketId).emit('liveChatMessage', systemMessage);
                  io.to(otherSocketId).emit('chatSessionEnded');
             }
+            io.to('admin_support_room').emit('chatSessionClosed', session._id.toString());
             logger.info(`Session ${session._id} closed due to disconnect of ${socket.id}.`);
         }
     } catch (error) {
@@ -254,10 +279,12 @@ const __dirname = path.dirname(__filename);
 // The frontend build is always in '.../' relative to the project root.
 const frontendDistPath = path.resolve(__dirname, __dirname.endsWith('dist') ? '../../' : '../');
 
-app.use(express.static(frontendDistPath));
+// FIX: Add explicit types to middleware to fix overload error.
+app.use(express.static(frontendDistPath) as (req: Request, res: Response, next: NextFunction) => void);
 
 // Serve files from Vercel's temporary /tmp directory
-app.use('/uploads', express.static('/tmp/uploads'));
+// FIX: Add explicit types to middleware to fix overload error.
+app.use('/uploads', express.static('/tmp/uploads') as (req: Request, res: Response, next: NextFunction) => void);
 
 
 // Fallback for Single Page Application (SPA)

@@ -4,7 +4,7 @@ import { useToast } from './useToast';
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (plan: ServicePlan) => void;
+  addToCart: (plan: ServicePlan, domainName?: string) => void;
   removeFromCart: (planId: string) => void;
   clearCart: () => void;
   totalPrice: number;
@@ -16,14 +16,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const { addToast } = useToast();
 
-  const addToCart = (plan: ServicePlan) => {
+  const addToCart = (plan: ServicePlan, domainName?: string) => {
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.plan._id === plan._id);
       if (existingItem) {
         addToast(`${plan.name} is already in your cart.`, 'info');
         return prevItems;
       }
-      return [...prevItems, { plan, quantity: 1 }];
+      return [...prevItems, { plan, quantity: 1, domainName }];
     });
   };
 
