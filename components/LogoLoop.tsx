@@ -10,6 +10,7 @@ const toCssLength = (value?: string | number) => (typeof value === 'number' ? `$
 
 const cx = (...parts: (string | boolean | undefined)[]) => parts.filter(Boolean).join(' ');
 
+// FIX: Changed HTMLElement to support divs and uls.
 const useResizeObserver = (callback: () => void, elements: React.RefObject<HTMLElement>[], dependencies: any[]) => {
   useEffect(() => {
     // FIX: Restructured the hook logic to first check for SSR environments, then correctly handle the fallback for browsers without ResizeObserver. This prevents a runtime error where `window` could be undefined and fixes a bug where two resize listeners were attached simultaneously.

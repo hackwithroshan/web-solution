@@ -44,9 +44,25 @@ const processMonthlyData = (aggResult: any[], dataKey: 'count' | 'total') => {
 router.get('/live-chats', protect, support, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const chats = await LiveChatSession.find({ status: { $in: ['waiting', 'active'] } })
-            .select('user createdAt adminSocketId')
+            .populate('admin', 'name')
+            .select('user createdAt adminSocketId status admin')
             .sort({ createdAt: 1 });
         res.json(chats);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// @desc    Get a single live chat session by ID
+// @route   GET /api/admin/live-chats/:id
+router.get('/live-chats/:id', protect, support, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const chat = await LiveChatSession.findById(id).populate('admin', 'name');
+        if (!chat) {
+            throw new ApiError(404, 'Chat session not found');
+        }
+        res.json(chat);
     } catch (error) {
         next(error);
     }

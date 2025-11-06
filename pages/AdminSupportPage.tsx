@@ -1,132 +1,130 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Ticket, TicketStatus, TicketPriority, ChatMessage } from '../types';
-import { fetchAllTickets, fetchAdminLiveChats } from '../services/api';
+import { ChatMessage } from '../types';
+import { fetchAdminLiveChats, fetchAdminLiveChatById } from '../services/api';
 import AdminSidebar from '../components/AdminSidebar';
 import DashboardHeader from '../components/DashboardHeader';
-import { Search, Inbox, Edit, CheckSquare, XCircle } from 'lucide-react';
+import { Loader, MessageSquareText, User as UserIcon } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import LiveChatInterface from '../components/LiveChatInterface';
-import Button from '../components/ui/Button';
+import ChatListPanel from '../components/ChatListPanel';
+import UserDetailsPanel from '../components/UserDetailsPanel';
 import { useAuth } from '../hooks/useAuth';
-import LiveChatList from '../components/LiveChatList';
-
-// --- Skeleton Components ---
-const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
-    <div className={`animate-pulse bg-slate-200 ${className}`} />
-);
-
-const StatCardSkeleton: React.FC = () => (
-    <div className="bg-white p-5 rounded-xl shadow-sm">
-        <Skeleton className="h-6 w-1/3 mb-2 rounded" />
-        <Skeleton className="h-8 w-1/4 rounded" />
-    </div>
-);
-
-const TableRowSkeleton: React.FC = () => (
-    <tr>
-        <td className="px-6 py-4"><Skeleton className="h-5 w-4/5 rounded" /></td>
-        <td className="px-6 py-4"><Skeleton className="h-5 w-2/3 rounded" /></td>
-        <td className="px-6 py-4"><Skeleton className="h-6 w-24 rounded-full" /></td>
-        <td className="px-6 py-4"><Skeleton className="h-6 w-20 rounded-full" /></td>
-        <td className="px-6 py-4"><Skeleton className="h-5 w-3/4 rounded" /></td>
-        <td className="px-6 py-4"><Skeleton className="h-5 w-16 rounded" /></td>
-    </tr>
-);
-
-// --- UI Components ---
-const StatusBadge: React.FC<{ status: TicketStatus }> = ({ status }) => {
-    const statusStyles = {
-        open: 'bg-blue-100 text-blue-800',
-        in_progress: 'bg-yellow-100 text-yellow-800',
-        closed: 'bg-gray-100 text-gray-800',
-    };
-    const formattedStatus = status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-    return (
-        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyles[status]}`}>
-            {formattedStatus}
-        </span>
-    );
-};
-
-const PriorityBadge: React.FC<{ priority: TicketPriority }> = ({ priority }) => {
-    const priorityStyles = {
-        low: 'bg-green-100 text-green-800',
-        medium: 'bg-orange-100 text-orange-800',
-        high: 'bg-red-100 text-red-800',
-    };
-     const formattedPriority = priority.charAt(0).toUpperCase() + priority.slice(1);
-    return (
-        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${priorityStyles[priority]}`}>
-            {formattedPriority}
-        </span>
-    );
-};
-
-const StatCard: React.FC<{ title: string; count: number; icon: React.ElementType; color: string; onClick: () => void; isActive: boolean }> = ({ title, count, icon: Icon, color, onClick, isActive }) => (
-    <button onClick={onClick} className={`text-left bg-white p-5 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border-2 ${isActive ? color : 'border-transparent'}`}>
-        <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-500">{title}</h3>
-            <Icon className="w-5 h-5 text-gray-400" />
-        </div>
-        <p className="text-3xl font-bold mt-1 text-gray-800">{count}</p>
-    </button>
-);
-
 
 const AdminSupportPage: React.FC = () => {
     const { user: adminUser } = useAuth();
-    const [tickets, setTickets] = useState<Ticket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { addToast } = useToast();
     
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
-    const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
-    const [sortBy, setSortBy] = useState('updatedAt-desc');
-    
     const socketRef = useRef<Socket | null>(null);
-    const [activeChats, setActiveChats] = useState<any[]>([]);
-    const [activeLiveSession, setActiveLiveSession] = useState<{ id: string, user: any, history: ChatMessage[] } | null>(null);
+    const [liveChats, setLiveChats] = useState<any[]>([]);
+    const [selectedSession, setSelectedSession] = useState<{ id: string, user: any, history: ChatMessage[], admin?: any } | null>(null);
+    const notificationSoundRef = useRef(new Audio('https://res.cloudinary.com/dvrqft9ov/video/upload/v1761992826/mixkit-software-interface-start-2574_nsv3uq.wav'));
+    const [isRinging, setIsRinging] = useState(false);
+
+    // State for filters
+    const [activeInboxFilter, setActiveInboxFilter] = useState('All');
+    const [activeStatusFilter, setActiveStatusFilter] = useState('All');
+
+    // Request notification permission on mount
+    useEffect(() => {
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+    }, []);
+
+    const showBrowserNotification = (title: string, body: string) => {
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(title, { body });
+        }
+    };
+    
+    const handleSelectChat = useCallback(async (chat: any) => {
+        if (chat.status === 'waiting') {
+            socketRef.current?.emit('adminJoinsChat', { sessionId: chat._id, adminUser });
+        } else {
+            // It's an active chat, being handled by someone (maybe this agent, maybe another)
+            // Fetch the full history to view it
+            try {
+                const fullSession = await fetchAdminLiveChatById(chat._id);
+                setSelectedSession({
+                    id: fullSession._id,
+                    user: fullSession.user,
+                    history: fullSession.history,
+                    admin: fullSession.admin
+                });
+            } catch (err: any) {
+                addToast(err.message || 'Could not load chat history.', 'error');
+            }
+        }
+    }, [adminUser, addToast]);
+
+    const handleEndChat = useCallback(() => {
+        if (socketRef.current && selectedSession) {
+            socketRef.current.emit('endLiveChat', selectedSession.id);
+        }
+        // UI will update via 'chatSessionEnded' event from server
+    }, [selectedSession]);
+    
+    const handlePushChat = useCallback(() => {
+        if (socketRef.current && selectedSession) {
+            if (window.confirm('Are you sure you want to return this chat to the queue?')) {
+                socketRef.current.emit('adminLeavesChat', selectedSession.id);
+            }
+        }
+    }, [selectedSession]);
 
     useEffect(() => {
         const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
-        socketRef.current = io(socketUrl);
-        socketRef.current.emit('adminJoinSupport');
-
-        socketRef.current.on('chatSessionStarted', (sessionData) => {
-            setActiveLiveSession(sessionData);
-        });
+        const socket = io(socketUrl);
+        socketRef.current = socket;
         
-        socketRef.current.on('newLiveChatRequest', (newChat) => {
-            addToast(`New live chat request from ${newChat.user.name}`, 'info');
-            setActiveChats(prev => {
-                if (prev.some(c => c._id === newChat.id)) return prev;
-                return [...prev, { ...newChat, _id: newChat.id }];
+        socket.emit('adminJoinSupport');
+
+        const handleNewChat = (newChat: any) => {
+            addToast(`New chat request from ${newChat.user.name}`, 'info');
+            showBrowserNotification('New Chat Request', `From: ${newChat.user.name}`);
+            setLiveChats(prev => {
+                if (prev.some(c => c._id === newChat._id)) return prev;
+                return [...prev, newChat];
             });
-        });
+        };
 
-        socketRef.current.on('chatSessionTaken', ({ sessionId, adminName }) => {
-            setActiveChats(prev => prev.map(chat => 
-                chat._id === sessionId ? { ...chat, adminSocketId: 'taken', adminName } : chat
+        const handleChatTaken = ({ sessionId, admin }: { sessionId: string; admin: any }) => {
+            setLiveChats(prev => prev.map(c => 
+                c._id === sessionId ? { ...c, status: 'active', admin: admin } : c
             ));
-        });
+        };
 
-        socketRef.current.on('chatSessionClosed', (sessionId) => {
-            setActiveChats(prev => prev.filter(chat => chat._id !== sessionId));
-        });
+        const handleChatClosed = (sessionId: string) => {
+            setLiveChats(prev => prev.filter(c => c._id !== sessionId));
+            setSelectedSession(prev => (prev?.id === sessionId ? null : prev));
+        };
 
+        const handleSessionStart = (sessionData: any) => {
+            setSelectedSession(sessionData);
+            setLiveChats(prev => prev.filter(c => c._id !== sessionData.id));
+        };
+
+        const handleSessionEnded = () => {
+            addToast("The live chat session has ended.", "info");
+            setSelectedSession(null);
+        };
+        
+        socket.on('newLiveChatRequest', handleNewChat);
+        socket.on('chatSessionTaken', handleChatTaken);
+        socket.on('chatSessionClosed', handleChatClosed);
+        socket.on('chatSessionStarted', handleSessionStart);
+        socket.on('chatSessionEnded', handleSessionEnded);
 
         const loadInitialData = async () => {
             setIsLoading(true);
             try {
-                const [ticketList, chatList] = await Promise.all([fetchAllTickets(), fetchAdminLiveChats()]);
-                setTickets(ticketList);
-                setActiveChats(chatList);
+                const chatList = await fetchAdminLiveChats();
+                setLiveChats(chatList);
             } catch (err: any) {
-                addToast(err.message || 'Failed to fetch initial support data', 'error');
+                addToast(err.message || 'Failed to fetch support data', 'error');
             } finally {
                 setIsLoading(false);
             }
@@ -134,210 +132,160 @@ const AdminSupportPage: React.FC = () => {
         
         loadInitialData();
 
-        const pollingInterval = setInterval(async () => {
-            try {
-                const chatList = await fetchAdminLiveChats();
-                setActiveChats(chatList);
-            } catch (error) {
-                console.error("Polling for active chats failed:", error);
-            }
-        }, 7000);
-
         return () => {
-            socketRef.current?.disconnect();
-            clearInterval(pollingInterval);
+            socket.off('newLiveChatRequest', handleNewChat);
+            socket.off('chatSessionTaken', handleChatTaken);
+            socket.off('chatSessionClosed', handleChatClosed);
+            socket.off('chatSessionStarted', handleSessionStart);
+            socket.off('chatSessionEnded', handleSessionEnded);
+            socket.disconnect();
         };
     }, [addToast]);
 
-    const handleJoinChat = (sessionId: string) => {
-        socketRef.current?.emit('adminJoinsChat', { sessionId, adminUser });
-    };
+    // Effect to control the looping notification sound
+    useEffect(() => {
+        const waitingChats = liveChats.filter(c => c.status === 'waiting').length;
+        const isAdminInChat = !!selectedSession;
 
-    const ticketStats = useMemo(() => {
-        return tickets.reduce((acc, ticket) => {
-            if (ticket.status === 'open') acc.open++;
-            else if (ticket.status === 'in_progress') acc.in_progress++;
-            else if (ticket.status === 'closed') acc.closed++;
-            return acc;
-        }, { open: 0, in_progress: 0, closed: 0 });
-    }, [tickets]);
-    
-    const filteredAndSortedTickets = useMemo(() => {
-        let filtered = [...tickets];
-
-        if (statusFilter !== 'all') {
-            filtered = filtered.filter(ticket => ticket.status === statusFilter);
+        if (waitingChats > 0 && !isAdminInChat) {
+            setIsRinging(true);
+        } else {
+            setIsRinging(false);
         }
-        if (priorityFilter !== 'all') {
-            filtered = filtered.filter(ticket => ticket.priority === priorityFilter);
-        }
+    }, [liveChats, selectedSession]);
 
-        if (searchTerm.trim() !== '') {
-            const lowercasedTerm = searchTerm.toLowerCase();
-            filtered = filtered.filter(ticket => 
-                ticket.subject.toLowerCase().includes(lowercasedTerm) ||
-                (ticket.user?.name && ticket.user.name.toLowerCase().includes(lowercasedTerm)) ||
-                ticket._id.toLowerCase().includes(lowercasedTerm)
-            );
+    // Effect to play/pause audio based on isRinging state
+    useEffect(() => {
+        const audio = notificationSoundRef.current;
+        audio.loop = true;
+
+        if (isRinging) {
+            audio.play().catch(error => console.log("Audio loop failed:", error));
+        } else {
+            audio.pause();
+            audio.currentTime = 0;
         }
 
-        filtered.sort((a, b) => {
-            const dateA = new Date(sortBy.includes('updatedAt') ? a.updatedAt : a.createdAt).getTime();
-            const dateB = new Date(sortBy.includes('updatedAt') ? b.updatedAt : b.createdAt).getTime();
-            return sortBy.endsWith('desc') ? dateB - dateA : dateA - dateB;
-        });
+        return () => { // Cleanup on unmount
+            audio.pause();
+            audio.currentTime = 0;
+        };
+    }, [isRinging]);
 
-        return filtered;
-    }, [tickets, searchTerm, statusFilter, priorityFilter, sortBy]);
+    const counts = useMemo(() => ({
+        unassigned: liveChats.filter(c => c.status === 'waiting').length,
+        assignedToMe: liveChats.filter(c => c.status === 'active' && c.admin?._id === adminUser?._id).length,
+        agent: liveChats.filter(c => c.status === 'active').length,
+        awaitingAgent: liveChats.filter(c => c.status === 'waiting').length,
+        paused: 0,
+    }), [liveChats, adminUser]);
 
-    const renderTicketContent = () => {
-        if (isLoading) {
-            return (
-                 <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Updated</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} />)}
-                    </tbody>
-                </table>
-            );
+    const filteredChats = useMemo(() => {
+        let chats = [...liveChats];
+
+        // Apply Inbox Filter
+        switch (activeInboxFilter) {
+            case 'Assigned to me':
+                chats = chats.filter(chat => chat.admin?._id === adminUser?._id && chat.status === 'active');
+                break;
+            case 'Unassigned':
+                chats = chats.filter(chat => chat.status === 'waiting');
+                break;
         }
-        if (filteredAndSortedTickets.length === 0) {
-            return (
-                <div className="text-center py-16">
-                    <Inbox size={40} className="mx-auto text-gray-400" />
-                    <h3 className="mt-4 text-lg font-medium text-gray-800">No Tickets Found</h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                       No tickets match your current filters.
-                    </p>
-                </div>
-            );
+
+        // Apply Status Filter
+        switch (activeStatusFilter) {
+            case 'Agent':
+                chats = chats.filter(chat => chat.status === 'active');
+                break;
+            case 'Awaiting agent':
+                chats = chats.filter(chat => chat.status === 'waiting');
+                break;
+            case 'Paused':
+                chats = []; 
+                break;
         }
-        return (
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Updated</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredAndSortedTickets.map(ticket => (
-                        <tr key={ticket._id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.subject}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ticket.user?.name || 'Deleted User'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm"><StatusBadge status={ticket.status} /></td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm"><PriorityBadge priority={ticket.priority} /></td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(ticket.updatedAt).toLocaleString()}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <Link to={`/admin/support/${ticket._id}`} className="text-cyan-600 hover:text-cyan-900">View</Link>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        );
-    }
-    
-    if (activeLiveSession) {
-        return (
-             <div className="flex h-screen bg-gray-100 font-sans">
-                <AdminSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-                <div className="relative flex-1 flex flex-col overflow-hidden lg:ml-64">
-                    <DashboardHeader onMenuClick={() => setIsSidebarOpen(true)} />
-                    <main className="flex-1 flex flex-col bg-slate-50 p-6 lg:p-8">
-                         <LiveChatInterface
-                            sessionId={activeLiveSession.id}
-                            initialHistory={activeLiveSession.history}
-                            socket={socketRef.current!}
-                            onEndChat={async () => {
-                                setActiveLiveSession(null);
-                                addToast("Live chat ended.", "info");
-                                try {
-                                    const chats = await fetchAdminLiveChats();
-                                    setActiveChats(chats);
-                                } catch (err) {
-                                    console.error("Failed to fetch active chats after ending session", err);
-                                }
-                            }}
-                            isAdmin
-                        />
-                    </main>
-                </div>
-            </div>
-        )
-    }
+        
+        return chats;
+    }, [liveChats, activeInboxFilter, activeStatusFilter, adminUser]);
+
+    const isReadOnly = useMemo(() => {
+        if (!selectedSession || !adminUser) return true;
+        // If the chat is active but has no admin assigned (e.g., due to a disconnect), the current admin should be able to take it.
+        if (!selectedSession.admin) return false; 
+        return selectedSession.admin._id !== adminUser._id;
+    }, [selectedSession, adminUser]);
 
     return (
-        <div className="flex h-screen bg-gray-100 font-sans">
+        <div className="flex h-screen bg-dashboard">
             <AdminSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
             <div className="relative flex-1 flex flex-col overflow-hidden lg:ml-64">
                 <DashboardHeader onMenuClick={() => setIsSidebarOpen(true)} />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-6 lg:p-8">
-                    <div className="mb-6">
-                        <h1 className="text-2xl font-bold text-gray-800">Support Center</h1>
-                        <p className="mt-1 text-gray-600">Overview and management of all support tickets and live chats.</p>
-                    </div>
-
-                    <div className="mb-8">
-                        <LiveChatList chats={activeChats} onJoin={handleJoinChat} />
-                    </div>
-
-                    <h2 className="text-xl font-bold text-gray-800 mb-6">Support Tickets</h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        {isLoading ? <>
-                            <StatCardSkeleton/>
-                            <StatCardSkeleton/>
-                            <StatCardSkeleton/>
-                        </> : <>
-                            <StatCard title="Open Tickets" count={ticketStats.open} icon={XCircle} color="border-blue-500" onClick={() => setStatusFilter(prev => prev === 'open' ? 'all' : 'open')} isActive={statusFilter === 'open'} />
-                            <StatCard title="In Progress" count={ticketStats.in_progress} icon={Edit} color="border-yellow-500" onClick={() => setStatusFilter(prev => prev === 'in_progress' ? 'all' : 'in_progress')} isActive={statusFilter === 'in_progress'} />
-                            <StatCard title="Closed" count={ticketStats.closed} icon={CheckSquare} color="border-gray-500" onClick={() => setStatusFilter(prev => prev === 'closed' ? 'all' : 'closed')} isActive={statusFilter === 'closed'} />
-                        </>
-                        }
-                    </div>
-
-                    <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="relative lg:col-span-2">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                                <input
-                                    type="text"
-                                    placeholder="Search by subject, user, or ID..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                <main className="flex-1 overflow-hidden">
+                    <div className="h-full grid grid-cols-12">
+                        {/* Left Panel: Chat List */}
+                        <div className="col-span-12 md:col-span-4 lg:col-span-3 h-full border-r border-gray-200 bg-white overflow-y-auto">
+                            {isLoading ? (
+                                <div className="flex justify-center items-center h-full">
+                                    <Loader className="animate-spin w-8 h-8 text-gray-400" />
+                                </div>
+                            ) : (
+                                <ChatListPanel
+                                    chats={filteredChats}
+                                    onSelect={handleSelectChat}
+                                    activeSessionId={selectedSession?.id}
+                                    activeInboxFilter={activeInboxFilter}
+                                    setActiveInboxFilter={setActiveInboxFilter}
+                                    activeStatusFilter={activeStatusFilter}
+                                    setActiveStatusFilter={setActiveStatusFilter}
+                                    counts={counts}
                                 />
-                            </div>
-                            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as any)} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                                <option value="all">All Priorities</option>
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                            </select>
-                            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                                <option value="updatedAt-desc">Last Updated (Newest)</option>
-                                <option value="updatedAt-asc">Last Updated (Oldest)</option>
-                                <option value="createdAt-desc">Created Date (Newest)</option>
-                            </select>
+                            )}
                         </div>
-                    </div>
 
-                    <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
-                        {renderTicketContent()}
+                        {/* Center Panel: Conversation */}
+                        <div className="col-span-12 md:col-span-8 lg:col-span-6 h-full flex flex-col bg-slate-50">
+                            {selectedSession && socketRef.current ? (
+                                <LiveChatInterface
+                                    key={selectedSession.id}
+                                    sessionId={selectedSession.id}
+                                    initialHistory={selectedSession.history}
+                                    socket={socketRef.current}
+                                    onEndChat={handleEndChat}
+                                    user={selectedSession.user}
+                                    isAdmin
+                                    isReadOnly={isReadOnly}
+                                    onPushChat={handlePushChat}
+                                />
+                            ) : (
+                                <div className="flex flex-col justify-center items-center h-full text-center p-4 bg-gray-50 rounded-lg">
+                                    <div className="p-4 bg-gray-200 rounded-full mb-4">
+                                        <MessageSquareText size={32} className="text-gray-500" />
+                                    </div>
+                                    <h2 className="text-lg font-semibold text-gray-800">Select a conversation</h2>
+                                    <p className="text-sm text-gray-500 max-w-xs mt-1">
+                                        Choose a chat from the left panel to start a conversation or view details.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right Panel: User Details */}
+                        <div className="hidden lg:block lg:col-span-3 h-full border-l border-gray-200 bg-white">
+                            {selectedSession ? (
+                                <UserDetailsPanel user={selectedSession.user} />
+                            ) : (
+                                 <div className="flex flex-col justify-center items-center h-full text-center p-4">
+                                    <div className="p-4 bg-gray-100 rounded-full mb-4">
+                                        <UserIcon size={32} className="text-gray-400" />
+                                    </div>
+                                    <h2 className="text-lg font-semibold text-gray-700">User Details</h2>
+                                    <p className="text-sm text-gray-500 max-w-xs mt-1">
+                                        Details will appear here when you select a chat.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </main>
             </div>

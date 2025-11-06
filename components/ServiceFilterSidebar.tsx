@@ -38,21 +38,20 @@ const ServiceFilterSidebar: React.FC<Props> = ({
       { id: 'above-50000', label: 'Above ₹50,000' },
   ];
 
-  const features = [
-    'SSL Certificate Included',
-    'Automatic Backup',
-    '24/7 Support',
-    'SEO Tools',
-    'Analytics Dashboard',
-    'Mobile Responsive'
-  ];
-
   return (
-    <aside className="bg-white p-6 rounded-xl shadow-sm lg:sticky top-8">
-      <h3 className="text-xl font-bold text-gray-800 mb-6">Filters</h3>
+    <aside className="bg-white p-6 rounded-xl shadow-sm">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-bold text-gray-800">Filters</h3>
+        <button
+            onClick={onClear}
+            className="text-sm font-semibold text-blue-600 hover:text-blue-800"
+        >
+            Clear All
+        </button>
+      </div>
 
       {/* Service Categories */}
-      <div>
+      <div className="border-t pt-4">
         <h4 className="font-semibold text-gray-700 mb-3">Service Categories</h4>
         <ul className="space-y-2">
           {categories.map(category => (
@@ -71,7 +70,7 @@ const ServiceFilterSidebar: React.FC<Props> = ({
       </div>
 
       {/* Price Range */}
-      <div className="mt-8">
+      <div className="mt-6 border-t pt-4">
         <h4 className="font-semibold text-gray-700 mb-3">Price Range</h4>
         <ul className="space-y-2">
             {priceRanges.map(range => (
@@ -87,32 +86,19 @@ const ServiceFilterSidebar: React.FC<Props> = ({
                     <label htmlFor={range.id} className="ml-3 text-sm text-gray-600">{range.label}</label>
                 </li>
             ))}
-        </ul>
-      </div>
-
-      {/* Features */}
-      <div className="mt-8">
-        <h4 className="font-semibold text-gray-700 mb-3">Features</h4>
-        <ul className="space-y-2">
-           {features.map((feature, i) => (
-            <li key={i} className="flex items-center">
-              <input
-                type="checkbox"
-                id={`feat-${i}`}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor={`feat-${i}`} className="ml-3 text-sm text-gray-600">{feature}</label>
+             <li key="clear-price" className="flex items-center">
+                <input
+                    type="radio"
+                    id="clear-price"
+                    name="price-range"
+                    checked={priceRange === ''}
+                    onChange={() => setPriceRange('')}
+                    className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="clear-price" className="ml-3 text-sm text-gray-600">Any Price</label>
             </li>
-          ))}
         </ul>
       </div>
-
-      <button
-        onClick={onClear}
-        className="mt-8 w-full bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
-      >
-        Clear Filters
-      </button>
     </aside>
   );
 };

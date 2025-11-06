@@ -4,9 +4,7 @@ import MagicBento from '../components/MagicBento';
 import { LogoLoop } from '../components/LogoLoop';
 import SeoMeta from '../components/SeoMeta';
 import TestimonialScroller from '../components/TestimonialScroller';
-import ProcessCard from '../components/ProcessCard';
-import ParticleCanvas from '../components/ParticleCanvas';
-// FIX: Import 'RippleGrid' component to resolve 'Cannot find name' error.
+import ChromaGrid from '../components/ChromaGrid';
 import RippleGrid from '../components/RippleGrid';
 import { Link } from 'react-router-dom';
 import ConsultationModal from '../components/ConsultationModal';
@@ -83,6 +81,43 @@ const HomePage: React.FC = () => {
             company: "HelpDesk Heroes",
             avatar: "https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto,w_96,h_96,c_fill,g_face/v1719482483/demo/man-testimonial-4.jpg"
         }
+    ];
+    
+    const testimonials3 = [
+        testimonials2[2], // Jessica Rodriguez
+        testimonials1[3], // Michael Brown
+        testimonials2[0], // Sarah Lee
+        testimonials1[1], // John Smith
+    ];
+    
+    const processItems = [
+      {
+        image: "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?q=80&w=800&auto=format&fit=crop",
+        title: "Discovery & Strategy",
+        subtitle: "Step 1",
+        handle: "We start by understanding your vision, goals, and target audience to create a robust project roadmap.",
+        borderColor: "#8B5CF6", // purple
+        gradient: "linear-gradient(145deg, #8B5CF6, #000)",
+        url: "#"
+      },
+      {
+        image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=800&auto=format&fit=crop",
+        title: "Design & Development",
+        subtitle: "Step 2",
+        handle: "Our team designs intuitive interfaces and writes clean code to build a high-performance, scalable product.",
+        borderColor: "#3B82F6", // blue
+        gradient: "linear-gradient(180deg, #3B82F6, #000)",
+        url: "#"
+      },
+      {
+        image: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800&auto=format&fit=crop",
+        title: "Launch & Optimize",
+        subtitle: "Step 3",
+        handle: "We deploy your project and monitor its performance, providing ongoing support and optimization.",
+        borderColor: "#10B981", // green
+        gradient: "linear-gradient(145deg, #10B981, #000)",
+        url: "#"
+      }
     ];
 
   return (
@@ -165,7 +200,7 @@ const HomePage: React.FC = () => {
                         We offer comprehensive digital solutions to elevate your business in the modern era.
                     </p>
                 </div>
-                <div className="flex justify-center scroll-animate fade-in delay-200">
+                <div className="flex justify-center scroll-animate fade-in delay-200 w-[85%] mx-auto">
                     <MagicBento 
                         textAutoHide={true}
                         enableStars={true}
@@ -183,54 +218,30 @@ const HomePage: React.FC = () => {
           </section>
 
           {/* 4. Our Process Section */}
-          <section className="py-24 relative overflow-hidden">
-            <div className="absolute inset-0 z-0">
-                <ParticleCanvas />
-            </div>
-            <div className="container mx-auto px-6 relative z-10">
-                <div className="text-center mb-20">
+          <section className="py-24">
+            <div className="container mx-auto px-6">
+                <div className="text-center mb-16">
                     <h2 className="text-4xl font-bold scroll-animate slide-up">Our Proven Process</h2>
                     <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto scroll-animate slide-up delay-100">
                         We follow a structured methodology to ensure your project's success from concept to launch.
                     </p>
                 </div>
-                <div className="relative">
-                    {/* Dashed line connecting cards on desktop */}
-                    <div className="hidden md:block absolute top-1/2 left-0 w-full h-px -translate-y-1/2" aria-hidden="true">
-                        <svg width="100%" height="100%">
-                            <line x1="15%" y1="50%" x2="85%" y2="50%" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="2" strokeDasharray="10 10" />
-                        </svg>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-3 gap-x-12 gap-y-16 relative">
-                         <div className="scroll-animate slide-up delay-200">
-                            <ProcessCard 
-                                number="1" 
-                                title="Discovery & Strategy" 
-                                description="We start by understanding your vision, goals, and target audience to create a robust project roadmap." 
-                            />
-                        </div>
-                         <div className="scroll-animate slide-up delay-300">
-                            <ProcessCard 
-                                number="2" 
-                                title="Design & Development" 
-                                description="Our team designs intuitive interfaces and writes clean code to build a high-performance, scalable product." 
-                            />
-                        </div>
-                         <div className="scroll-animate slide-up delay-400">
-                            <ProcessCard 
-                                number="3" 
-                                title="Launch & Optimize" 
-                                description="We deploy your project and monitor its performance, providing ongoing support and optimization." 
-                            />
-                        </div>
+                <div className="flex justify-center scroll-animate fade-in delay-200">
+                   <div style={{ height: '400px', width: '100%', maxWidth: '1200px', position: 'relative' }}>
+                      <ChromaGrid 
+                        items={processItems}
+                        radius={300}
+                        damping={0.45}
+                        fadeOut={0.6}
+                        ease="power3.out"
+                      />
                     </div>
                 </div>
             </div>
           </section>
 
           {/* 5. Testimonials Section */}
-          <section className="py-24">
+          <section className="py-24 overflow-hidden">
             <div className="container mx-auto px-6">
                 <div className="text-center mb-16">
                     <h2 className="text-4xl font-bold scroll-animate slide-up">What Our Clients Say</h2>
@@ -238,10 +249,11 @@ const HomePage: React.FC = () => {
                         Hear from businesses that have experienced the ApexNucleus difference.
                     </p>
                 </div>
-                <div className="bg-black/10 backdrop-blur-sm border border-white/10 py-6 rounded-2xl overflow-hidden scroll-animate scale-up delay-200">
-                    <TestimonialScroller testimonials={testimonials1} direction="left" speed="normal" />
-                    <TestimonialScroller testimonials={testimonials2} direction="right" speed="normal" />
-                </div>
+            </div>
+            <div className="space-y-4 scroll-animate scale-up delay-200">
+                <TestimonialScroller testimonials={testimonials1} direction="left" speed="normal" />
+                <TestimonialScroller testimonials={testimonials2} direction="right" speed="normal" />
+                <TestimonialScroller testimonials={testimonials3} direction="left" speed="normal" />
             </div>
           </section>
 

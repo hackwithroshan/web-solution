@@ -1,12 +1,58 @@
 import React from 'react';
 import { Service, PricingPlan } from './types';
-import { Server, Globe, Smartphone, ShieldCheck, Cloud } from 'lucide-react';
+import { Server, Globe, Smartphone, ShieldCheck, Cloud, Palette, Megaphone, Cpu } from 'lucide-react';
+
+export const MEGA_MENU_ITEMS = [
+  {
+    title: 'Design & Develop',
+    icon: <Palette className="w-5 h-5 text-blue-400" />,
+    links: [
+      { name: 'Branding', path: '/services/branding' },
+      { name: 'Websites', path: '/services/websites' },
+      { name: 'Mobile Apps', path: '/services/mobile-apps' },
+      { name: 'Software Development', path: '/services/software-development' },
+      { name: 'App Store Optimization (ASO)', path: '/services/aso' },
+    ],
+  },
+  {
+    title: 'Digital Marketing',
+    icon: <Megaphone className="w-5 h-5 text-purple-400" />,
+    links: [
+      { name: 'SEO', path: '/services/seo' },
+      { name: 'Adwords / PPC', path: '/services/adwords-ppc' },
+      { name: 'Social Media', path: '/services/social-media' },
+      { name: 'Content Marketing', path: '/services/content-marketing' },
+      { name: 'ORM', path: '/services/orm' },
+    ],
+  },
+  {
+    title: 'AI & Blockchain',
+    icon: <Cpu className="w-5 h-5 text-pink-400" />,
+    links: [
+      { name: 'AI Integration', path: '/services/ai-integration' },
+      { name: 'AI Automation', path: '/services/ai-automation' },
+      { name: 'Blockchain Development', path: '/services/blockchain-development' },
+    ],
+  },
+];
 
 export const NAV_LINKS = [
   { name: 'Home', path: '/' },
-  { name: 'Services', path: '/services' },
-  { name: 'Pricing', path: '/pricing' },
-  { name: 'Contact', path: '/contact' },
+  { name: 'About', path: '/about' },
+  { 
+    name: 'Services', 
+    path: '/services',
+    megaMenu: MEGA_MENU_ITEMS,
+    megaMenuTagline: {
+        title: '🏆 Driven by Results',
+        description: 'We deliver measurable outcomes that align with your business goals.',
+        path: '/case-studies'
+    }
+  },
+  { name: 'Case Studies', path: '/case-studies' },
+  { name: 'Success Stories', path: '/success-stories' },
+  { name: 'Blogs', path: '/blog' },
+  { name: 'Contact Us', path: '/contact' },
 ];
 
 export const SERVICES_DATA: Service[] = [

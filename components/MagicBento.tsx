@@ -1,66 +1,53 @@
-import React from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
-import { Cloud, Globe, Server, Smartphone, ShieldCheck, Bot } from 'lucide-react';
 
 const DEFAULT_PARTICLE_COUNT = 12;
 const DEFAULT_SPOTLIGHT_RADIUS = 300;
 const DEFAULT_GLOW_COLOR = '132, 0, 255';
 const MOBILE_BREAKPOINT = 768;
 
-interface CardDataItem {
-  // FIX: Replaced JSX.Element with React.ReactNode to resolve "Cannot find namespace 'JSX'" error and improve type safety.
-  icon: React.ReactNode;
-  color: string;
-  title: string;
-  description: string;
-  label: string;
-  backgroundImage?: string;
-}
-
-const cardData: CardDataItem[] = [
+const cardData = [
   {
-    icon: <Cloud className="h-8 w-8" />,
     color: '#060010',
-    title: 'Cloud Hosting',
-    description: 'Scalable and reliable cloud hosting solutions for your websites and applications.',
-    label: 'Hosting'
+    title: 'Analytics',
+    description: 'Track user behavior and gain valuable insights.',
+    label: 'Insights',
+    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto/v1720108333/analytics_bg.jpg'
   },
   {
-    icon: <Globe className="h-8 w-8" />,
     color: '#060010',
-    title: 'Domain Registration',
-    description: 'Find and register the perfect domain name for your business.',
-    label: 'Domains'
+    title: 'Dashboard',
+    description: 'A centralized view of all your important data.',
+    label: 'Overview',
+    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto/v1720108333/dashboard_bg.jpg'
   },
   {
-    icon: <Server className="h-8 w-8" />,
     color: '#060010',
-    title: 'Website Development',
-    description: 'Custom website development tailored to your brand and business goals.',
-    label: 'Web Dev',
-    backgroundImage: 'https://res.cloudinary.com/dvrqft9ov/image/upload/v1761547439/programming-background-collage_rvfwix.webp'
+    title: 'Collaboration',
+    description: 'Work together with your team seamlessly.',
+    label: 'Teamwork',
+    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/v1761547440/programming-background-collage_2_gs0lep.webp'
   },
   {
-    icon: <Smartphone className="h-8 w-8" />,
     color: '#060010',
-    title: 'App Development',
-    description: 'Native and cross-platform mobile application development services.',
-    label: 'App Dev',
-    backgroundImage: 'https://res.cloudinary.com/dvrqft9ov/image/upload/v1761547440/programming-background-collage_2_gs0lep.webp'
+    title: 'Automation',
+    description: 'Streamline your workflows and increase efficiency.',
+    label: 'Efficiency',
+    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/v1761547439/programming-background-collage_rvfwix.webp'
   },
   {
-    icon: <ShieldCheck className="h-8 w-8" />,
     color: '#060010',
-    title: 'Managed Security',
-    description: 'Comprehensive security to protect your digital assets from threats.',
-    label: 'Security'
+    title: 'Integration',
+    description: 'Connect all your favorite tools and services.',
+    label: 'Connectivity',
+    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto/v1720108333/integration_bg.jpg'
   },
   {
-    icon: <Bot className="h-8 w-8" />,
     color: '#060010',
-    title: 'AI Solutions',
-    description: 'Integrate AI-powered tools and automations into your business workflow.',
-    label: 'AI/ML'
+    title: 'Security',
+    description: 'Enterprise-grade protection for your data.',
+    label: 'Protection',
+    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto/v1720108333/security_bg.jpg'
   }
 ];
 
@@ -98,7 +85,7 @@ const updateCardGlowProperties = (card: HTMLElement, mouseX: number, mouseY: num
   card.style.setProperty('--glow-radius', `${radius}px`);
 };
 
-const ParticleCard: React.FC<{
+interface ParticleCardProps {
     children: React.ReactNode;
     className?: string;
     disableAnimations?: boolean;
@@ -108,7 +95,10 @@ const ParticleCard: React.FC<{
     enableTilt?: boolean;
     clickEffect?: boolean;
     enableMagnetism?: boolean;
-}> = ({
+    enableStars?: boolean;
+}
+
+const ParticleCard: React.FC<ParticleCardProps> = ({
   children,
   className = '',
   disableAnimations = false,
@@ -117,17 +107,18 @@ const ParticleCard: React.FC<{
   glowColor = DEFAULT_GLOW_COLOR,
   enableTilt = true,
   clickEffect = false,
-  enableMagnetism = false
+  enableMagnetism = false,
+  enableStars = true
 }) => {
-  const cardRef = React.useRef<HTMLDivElement>(null);
-  const particlesRef = React.useRef<HTMLDivElement[]>([]);
-  const timeoutsRef = React.useRef<number[]>([]);
-  const isHoveredRef = React.useRef(false);
-  const memoizedParticles = React.useRef<HTMLDivElement[]>([]);
-  const particlesInitialized = React.useRef(false);
-  const magnetismAnimationRef = React.useRef<gsap.core.Tween | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const particlesRef = useRef<HTMLDivElement[]>([]);
+  const timeoutsRef = useRef<number[]>([]);
+  const isHoveredRef = useRef(false);
+  const memoizedParticles = useRef<HTMLDivElement[]>([]);
+  const particlesInitialized = useRef(false);
+  const magnetismAnimationRef = useRef<gsap.core.Tween | null>(null);
 
-  const initializeParticles = React.useCallback(() => {
+  const initializeParticles = useCallback(() => {
     if (particlesInitialized.current || !cardRef.current) return;
 
     const { width, height } = cardRef.current.getBoundingClientRect();
@@ -137,7 +128,7 @@ const ParticleCard: React.FC<{
     particlesInitialized.current = true;
   }, [particleCount, glowColor]);
 
-  const clearAllParticles = React.useCallback(() => {
+  const clearAllParticles = useCallback(() => {
     timeoutsRef.current.forEach(clearTimeout);
     timeoutsRef.current = [];
     magnetismAnimationRef.current?.kill();
@@ -156,7 +147,7 @@ const ParticleCard: React.FC<{
     particlesRef.current = [];
   }, []);
 
-  const animateParticles = React.useCallback(() => {
+  const animateParticles = useCallback(() => {
     if (!cardRef.current || !isHoveredRef.current) return;
 
     if (!particlesInitialized.current) {
@@ -196,14 +187,16 @@ const ParticleCard: React.FC<{
     });
   }, [initializeParticles]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (disableAnimations || !cardRef.current) return;
 
     const element = cardRef.current;
 
     const handleMouseEnter = () => {
       isHoveredRef.current = true;
-      animateParticles();
+      if(enableStars) {
+        animateParticles();
+      }
 
       if (enableTilt) {
         gsap.to(element, {
@@ -218,7 +211,9 @@ const ParticleCard: React.FC<{
 
     const handleMouseLeave = () => {
       isHoveredRef.current = false;
-      clearAllParticles();
+      if(enableStars) {
+        clearAllParticles();
+      }
 
       if (enableTilt) {
         gsap.to(element, {
@@ -321,18 +316,20 @@ const ParticleCard: React.FC<{
 
     element.addEventListener('mouseenter', handleMouseEnter);
     element.addEventListener('mouseleave', handleMouseLeave);
-    element.addEventListener('mousemove', handleMouseMove);
-    element.addEventListener('click', handleClick);
+    element.addEventListener('mousemove', handleMouseMove as EventListener);
+    element.addEventListener('click', handleClick as EventListener);
 
     return () => {
       isHoveredRef.current = false;
       element.removeEventListener('mouseenter', handleMouseEnter);
       element.removeEventListener('mouseleave', handleMouseLeave);
-      element.removeEventListener('mousemove', handleMouseMove);
-      element.removeEventListener('click', handleClick);
-      clearAllParticles();
+      element.removeEventListener('mousemove', handleMouseMove as EventListener);
+      element.removeEventListener('click', handleClick as EventListener);
+      if(enableStars) {
+        clearAllParticles();
+      }
     };
-  }, [animateParticles, clearAllParticles, disableAnimations, enableTilt, enableMagnetism, clickEffect, glowColor]);
+  }, [animateParticles, clearAllParticles, disableAnimations, enableTilt, enableMagnetism, clickEffect, glowColor, enableStars]);
 
   return (
     <div
@@ -345,23 +342,25 @@ const ParticleCard: React.FC<{
   );
 };
 
-const GlobalSpotlight: React.FC<{
-  gridRef: React.RefObject<HTMLDivElement>;
-  disableAnimations?: boolean;
-  enabled?: boolean;
-  spotlightRadius?: number;
-  glowColor?: string;
-}> = ({
+interface GlobalSpotlightProps {
+    gridRef: React.RefObject<HTMLDivElement>;
+    disableAnimations?: boolean;
+    enabled?: boolean;
+    spotlightRadius?: number;
+    glowColor?: string;
+}
+
+const GlobalSpotlight: React.FC<GlobalSpotlightProps> = ({
   gridRef,
   disableAnimations = false,
   enabled = true,
   spotlightRadius = DEFAULT_SPOTLIGHT_RADIUS,
   glowColor = DEFAULT_GLOW_COLOR
 }) => {
-  const spotlightRef = React.useRef<HTMLDivElement | null>(null);
-  const isInsideSection = React.useRef(false);
+  const spotlightRef = useRef<HTMLDivElement | null>(null);
+  const isInsideSection = useRef(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (disableAnimations || !gridRef?.current || !enabled) return;
 
     const spotlight = document.createElement('div');
@@ -397,8 +396,7 @@ const GlobalSpotlight: React.FC<{
         rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
 
       isInsideSection.current = mouseInside || false;
-      // FIX: Changed querySelectorAll to use type assertion to avoid "Untyped function calls may not accept type arguments" error.
-      const cards = gridRef.current.querySelectorAll('.card') as NodeListOf<HTMLElement>;
+      const cards = gridRef.current.querySelectorAll('.card');
 
       if (!mouseInside) {
         gsap.to(spotlightRef.current, {
@@ -407,7 +405,7 @@ const GlobalSpotlight: React.FC<{
           ease: 'power2.out'
         });
         cards.forEach(card => {
-          card.style.setProperty('--glow-intensity', '0');
+          (card as HTMLElement).style.setProperty('--glow-intensity', '0');
         });
         return;
       }
@@ -416,7 +414,7 @@ const GlobalSpotlight: React.FC<{
       let minDistance = Infinity;
 
       cards.forEach(card => {
-        const cardElement = card;
+        const cardElement = card as HTMLElement;
         const cardRect = cardElement.getBoundingClientRect();
         const centerX = cardRect.left + cardRect.width / 2;
         const centerY = cardRect.top + cardRect.height / 2;
@@ -459,7 +457,6 @@ const GlobalSpotlight: React.FC<{
 
     const handleMouseLeave = () => {
       isInsideSection.current = false;
-      // FIX: Changed querySelectorAll to use a type cast inside forEach to avoid "Untyped function calls may not accept type arguments" error.
       gridRef.current?.querySelectorAll('.card').forEach(card => {
         (card as HTMLElement).style.setProperty('--glow-intensity', '0');
       });
@@ -485,9 +482,14 @@ const GlobalSpotlight: React.FC<{
   return null;
 };
 
-const BentoCardGrid: React.FC<{ children: React.ReactNode; gridRef: React.RefObject<HTMLDivElement> }> = ({ children, gridRef }) => (
+interface BentoCardGridProps {
+    children: React.ReactNode;
+    gridRef: React.RefObject<HTMLDivElement>;
+}
+
+const BentoCardGrid: React.FC<BentoCardGridProps> = ({ children, gridRef }) => (
   <div
-    className="bento-section grid gap-2 p-3 max-w-7xl select-none relative"
+    className="bento-section grid gap-2 p-3 w-full select-none relative"
     style={{ fontSize: 'clamp(1rem, 0.9rem + 0.5vw, 1.5rem)' }}
     ref={gridRef}
   >
@@ -496,9 +498,9 @@ const BentoCardGrid: React.FC<{ children: React.ReactNode; gridRef: React.RefObj
 );
 
 const useMobileDetection = () => {
-  const [isMobile, setIsMobile] = React.useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
 
     checkMobile();
@@ -510,7 +512,7 @@ const useMobileDetection = () => {
   return isMobile;
 };
 
-const MagicBento: React.FC<{
+interface MagicBentoProps {
   textAutoHide?: boolean;
   enableStars?: boolean;
   enableSpotlight?: boolean;
@@ -522,7 +524,9 @@ const MagicBento: React.FC<{
   glowColor?: string;
   clickEffect?: boolean;
   enableMagnetism?: boolean;
-}> = ({
+}
+
+const MagicBento: React.FC<MagicBentoProps> = ({
   textAutoHide = true,
   enableStars = true,
   enableSpotlight = true,
@@ -535,25 +539,9 @@ const MagicBento: React.FC<{
   clickEffect = true,
   enableMagnetism = true
 }) => {
-  const gridRef = React.useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const isMobile = useMobileDetection();
   const shouldDisableAnimations = disableAnimations || isMobile;
-
-  const renderCardWithBackground = (card: CardDataItem, children: React.ReactNode) => (
-    <>
-      {card.backgroundImage && (
-        <>
-          <div
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-500 ease-in-out group-hover:scale-105"
-            style={{ backgroundImage: `url(${card.backgroundImage})` }}
-            aria-hidden="true"
-          ></div>
-          <div className="absolute inset-0 bg-black/60" aria-hidden="true"></div>
-        </>
-      )}
-      {children}
-    </>
-  );
 
   return (
     <>
@@ -574,9 +562,11 @@ const MagicBento: React.FC<{
           }
           
           .card-responsive {
+            display: grid;
             grid-template-columns: 1fr;
             width: 100%;
             margin: 0 auto;
+            padding: 0.5rem;
           }
           
           @media (min-width: 600px) {
@@ -588,6 +578,7 @@ const MagicBento: React.FC<{
           @media (min-width: 1024px) {
             .card-responsive {
               grid-template-columns: repeat(4, 1fr);
+              grid-template-rows: repeat(3, 1fr);
             }
             
             .card-responsive .card:nth-child(3) {
@@ -623,10 +614,7 @@ const MagicBento: React.FC<{
             pointer-events: none;
             transition: opacity 0.3s ease;
             z-index: 1;
-          }
-          
-          .card--border-glow:hover::after {
-            opacity: 1;
+            opacity: var(--glow-intensity);
           }
           
           .card--border-glow:hover {
@@ -653,7 +641,6 @@ const MagicBento: React.FC<{
             display: -webkit-box;
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 1;
-            line-clamp: 1;
             overflow: hidden;
             text-overflow: ellipsis;
           }
@@ -662,22 +649,37 @@ const MagicBento: React.FC<{
             display: -webkit-box;
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 2;
-            line-clamp: 2;
             overflow: hidden;
             text-overflow: ellipsis;
+          }
+
+          .card .card-background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 20px;
+            opacity: 0.3;
+            transition: opacity 0.3s ease-in-out;
+          }
+
+          .card:hover .card-background-image {
+            opacity: 0.5;
           }
           
           @media (max-width: 599px) {
             .card-responsive {
               grid-template-columns: 1fr;
-              width: 90%;
+              width: 100%;
               margin: 0 auto;
               padding: 0.5rem;
             }
             
             .card-responsive .card {
               width: 100%;
-              min-height: 220px;
+              min-height: 180px;
             }
           }
         `}
@@ -694,14 +696,14 @@ const MagicBento: React.FC<{
       )}
 
       <BentoCardGrid gridRef={gridRef}>
-        <div className="card-responsive grid gap-4">
+        <div className="card-responsive gap-2">
           {cardData.map((card, index) => {
-            const baseClassName = `group card flex flex-col justify-end relative aspect-[4/3] min-h-[200px] w-full max-w-full p-5 rounded-[20px] border border-solid font-light overflow-hidden transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)] ${
+            const baseClassName = `card flex flex-col justify-between relative aspect-[4/3] min-h-[200px] w-full max-w-full p-5 rounded-[20px] border border-solid font-light overflow-hidden transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)] ${
               enableBorderGlow ? 'card--border-glow' : ''
             }`;
 
-            const cardStyle: React.CSSProperties = {
-              backgroundColor: card.backgroundImage ? 'transparent' : card.color || 'var(--background-dark)',
+            const cardStyle = {
+              backgroundColor: card.color || 'var(--background-dark)',
               borderColor: 'var(--border-color)',
               color: 'var(--white)',
               '--glow-x': '50%',
@@ -711,157 +713,39 @@ const MagicBento: React.FC<{
             } as React.CSSProperties;
 
             const cardContent = (
-              <>
-                <div className="absolute top-5 left-5 text-cyan-400">
-                  {card.icon}
-                </div>
-                <div className="relative z-10">
-                    <span className="card__label text-sm font-semibold uppercase tracking-wider text-gray-400">{card.label}</span>
-                    <h3 className={`card__title font-bold text-xl mt-2 mb-1 ${textAutoHide ? 'text-clamp-1' : ''}`}>
+                <>
+                    <img src={card.img} alt={card.title} className="card-background-image" loading="lazy" decoding="async" />
+                    <div className="card__header flex justify-between gap-3 relative text-white z-10">
+                        <span className="card__label text-base">{card.label}</span>
+                    </div>
+                    <div className="card__content flex flex-col relative text-white z-10">
+                        <h3 className={`card__title font-normal text-base m-0 mb-1 ${textAutoHide ? 'text-clamp-1' : ''}`}>
                         {card.title}
-                    </h3>
-                    <p className={`card__description text-sm leading-snug opacity-80 ${textAutoHide ? 'text-clamp-2' : ''}`}>
+                        </h3>
+                        <p
+                        className={`card__description text-xs leading-5 opacity-90 ${textAutoHide ? 'text-clamp-2' : ''}`}
+                        >
                         {card.description}
-                    </p>
-                </div>
-              </>
+                        </p>
+                    </div>
+                </>
             );
 
-            if (enableStars) {
-              return (
-                <ParticleCard
-                  key={index}
-                  className={baseClassName}
-                  style={cardStyle}
-                  disableAnimations={shouldDisableAnimations}
-                  particleCount={particleCount}
-                  glowColor={glowColor}
-                  enableTilt={enableTilt}
-                  clickEffect={clickEffect}
-                  enableMagnetism={enableMagnetism}
-                >
-                  {renderCardWithBackground(card, cardContent)}
-                </ParticleCard>
-              );
-            }
-
             return (
-              <div
+              <ParticleCard
                 key={index}
                 className={baseClassName}
                 style={cardStyle}
-                ref={(el: HTMLDivElement | null) => {
-                  if (!el) return;
-
-                  const handleMouseMove = (e: MouseEvent) => {
-                    if (shouldDisableAnimations) return;
-
-                    const rect = el.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    const centerX = rect.width / 2;
-                    const centerY = rect.height / 2;
-
-                    if (enableTilt) {
-                      const rotateX = ((y - centerY) / centerY) * -10;
-                      const rotateY = ((x - centerX) / centerX) * 10;
-
-                      gsap.to(el, {
-                        rotateX,
-                        rotateY,
-                        duration: 0.1,
-                        ease: 'power2.out',
-                        transformPerspective: 1000
-                      });
-                    }
-
-                    if (enableMagnetism) {
-                      const magnetX = (x - centerX) * 0.05;
-                      const magnetY = (y - centerY) * 0.05;
-
-                      gsap.to(el, {
-                        x: magnetX,
-                        y: magnetY,
-                        duration: 0.3,
-                        ease: 'power2.out'
-                      });
-                    }
-                  };
-
-                  const handleMouseLeave = () => {
-                    if (shouldDisableAnimations) return;
-
-                    if (enableTilt) {
-                      gsap.to(el, {
-                        rotateX: 0,
-                        rotateY: 0,
-                        duration: 0.3,
-                        ease: 'power2.out'
-                      });
-                    }
-
-                    if (enableMagnetism) {
-                      gsap.to(el, {
-                        x: 0,
-                        y: 0,
-                        duration: 0.3,
-                        ease: 'power2.out'
-                      });
-                    }
-                  };
-
-                  const handleClick = (e: MouseEvent) => {
-                    if (!clickEffect || shouldDisableAnimations) return;
-
-                    const rect = el.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-
-                    const maxDistance = Math.max(
-                      Math.hypot(x, y),
-                      Math.hypot(x - rect.width, y),
-                      Math.hypot(x, y - rect.height),
-                      Math.hypot(x - rect.width, y - rect.height)
-                    );
-
-                    const ripple = document.createElement('div');
-                    ripple.style.cssText = `
-                      position: absolute;
-                      width: ${maxDistance * 2}px;
-                      height: ${maxDistance * 2}px;
-                      border-radius: 50%;
-                      background: radial-gradient(circle, rgba(${glowColor}, 0.4) 0%, rgba(${glowColor}, 0.2) 30%, transparent 70%);
-                      left: ${x - maxDistance}px;
-                      top: ${y - maxDistance}px;
-                      pointer-events: none;
-                      z-index: 1000;
-                    `;
-
-                    el.appendChild(ripple);
-
-                    gsap.fromTo(
-                      ripple,
-                      {
-                        scale: 0,
-                        opacity: 1
-                      },
-                      {
-                        scale: 1,
-                        opacity: 0,
-                        duration: 0.8,
-                        ease: 'power2.out',
-                        onComplete: () => ripple.remove()
-                      }
-                    );
-                  };
-
-                  el.addEventListener('mousemove', handleMouseMove);
-                  el.addEventListener('mouseleave', handleMouseLeave);
-                  el.addEventListener('click', handleClick);
-                }}
+                disableAnimations={shouldDisableAnimations}
+                particleCount={particleCount}
+                glowColor={glowColor}
+                enableTilt={enableTilt}
+                clickEffect={clickEffect}
+                enableMagnetism={enableMagnetism}
+                enableStars={enableStars}
               >
-                {renderCardWithBackground(card, cardContent)}
-              </div>
+                {cardContent}
+              </ParticleCard>
             );
           })}
         </div>

@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import jwt, { Secret } from 'jsonwebtoken';
 import User, { IUser } from '../models/User.js';
 import Multer from 'multer';
@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-export const protect = async (req: Request, res: Response, next: NextFunction) => {
+export const protect = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     let token;
 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -48,7 +48,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     }
 };
 
-export const admin = (req: Request, res: Response, next: NextFunction) => {
+export const admin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user && req.user.role === 'admin') {
         next();
     } else {
@@ -57,7 +57,7 @@ export const admin = (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-export const support = (req: Request, res: Response, next: NextFunction) => {
+export const support = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user && (req.user.role === 'admin' || req.user.role === 'support')) {
         next();
     } else {

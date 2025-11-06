@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import { ChatMessage, MessageSender } from '../types';
-import { Send, Power, User, Bot } from 'lucide-react';
-import Button from './ui/Button';
+import { Send, Power, Pause, MoreVertical, Paperclip, Smile, Undo2 } from 'lucide-react';
 import ChatBubble from './ui/ChatBubble';
 import TypingIndicator from './ui/TypingIndicator';
 
@@ -11,19 +10,30 @@ interface LiveChatInterfaceProps {
     initialHistory: ChatMessage[];
     socket: Socket;
     onEndChat: () => void;
+    user: { name: string, phone?: string };
     isAdmin?: boolean;
+    isReadOnly?: boolean;
+    onPushChat?: () => void;
 }
 
-const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initialHistory, socket, onEndChat, isAdmin = false }) => {
+const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initialHistory, socket, onEndChat, user, isAdmin = false, isReadOnly = false, onPushChat }) => {
     const [messages, setMessages] = useState<ChatMessage[]>(initialHistory);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    // FIX: Replaced NodeJS.Timeout with 'number' type for browser compatibility.
     const typingTimeoutRef = useRef<number | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const notificationSoundRef = useRef(new Audio('https://res.cloudinary.com/dvrqft9ov/video/upload/v1761992826/mixkit-software-interface-start-2574_nsv3uq.wav'));
+
+    useEffect(() => {
+        setMessages(initialHistory);
+    }, [initialHistory, sessionId]);
 
     useEffect(() => {
         const handleNewMessage = (message: ChatMessage) => {
+            const isIncoming = message.sender !== (isAdmin ? MessageSender.BOT : MessageSender.USER);
+            if (isIncoming) {
+                notificationSoundRef.current.play().catch(error => console.log("Audio play failed:", error));
+            }
             setMessages(prev => [...prev, message]);
         };
         const handleStartTyping = () => setIsTyping(true);
@@ -39,7 +49,7 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
             socket.off('hasStoppedTyping', handleStopTyping);
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         };
-    }, [socket]);
+    }, [socket, isAdmin, sessionId]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -47,7 +57,7 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim()) return;
+        if (!input.trim() || isReadOnly) return;
 
         const message: ChatMessage = {
             id: Date.now().toString(),
@@ -61,42 +71,54 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
         setMessages(prev => [...prev, message]);
         setInput('');
 
-        // Ensure stop typing is emitted on send
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         socket.emit('stopTyping', sessionId);
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInput(e.target.value);
-
+        if (isReadOnly) return;
         socket.emit('startTyping', sessionId);
-
-        if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-        }
-
-        // FIX: Replaced NodeJS.Timeout with 'number' type for browser compatibility.
-        typingTimeoutRef.current = window.setTimeout(() => {
-            socket.emit('stopTyping', sessionId);
-        }, 2000); // 2 seconds of inactivity
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = window.setTimeout(() => socket.emit('stopTyping', sessionId), 2000);
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 border-b flex justify-between items-center">
-                <h3 className="font-bold text-gray-800">Live Chat Session</h3>
-                <Button onClick={onEndChat} variant="secondary" className="!text-sm !py-1.5 !px-3 !bg-red-50 hover:!bg-red-100 !text-red-700">
-                    <Power size={14} className="mr-1.5" /> End Chat
-                </Button>
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+            {/* Header */}
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white flex-shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm">
+                        {user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-gray-800">{user.name}</h3>
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            <p className="text-xs text-gray-500">Online</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                     {!isReadOnly && onPushChat && (
+                        <button onClick={onPushChat} className="p-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors" title="Return to Queue">
+                            <Undo2 size={18} />
+                        </button>
+                    )}
+                     <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"><Pause size={18} /></button>
+                     {!isReadOnly && <button onClick={onEndChat} className="p-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"><Power size={18} /></button>}
+                     <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"><MoreVertical size={18} /></button>
+                </div>
             </div>
+            
+            {/* Message List */}
             <div className="flex-1 p-4 overflow-y-auto">
-                <p className="text-center text-xs text-gray-400 pb-4 border-b mb-4">This is the beginning of your live chat session.</p>
                 {messages.map((msg, index) => {
                     const prevMsg = messages[index-1];
                     const showAvatar = !prevMsg || prevMsg.sender !== msg.sender;
                     return (
                         <ChatBubble 
-                            key={index} 
+                            key={msg.id || index} 
                             message={msg} 
                             isOwn={msg.sender === (isAdmin ? MessageSender.BOT : MessageSender.USER)}
                             showAvatar={showAvatar}
@@ -106,19 +128,31 @@ const LiveChatInterface: React.FC<LiveChatInterfaceProps> = ({ sessionId, initia
                 {isTyping && <TypingIndicator senderType={isAdmin ? 'user' : 'agent'} />}
                 <div ref={messagesEndRef} />
             </div>
-            <div className="p-4 border-t bg-gray-50">
-                <form onSubmit={handleSend} className="flex items-center gap-3">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={handleInputChange}
-                        placeholder="Type your message..."
-                        className="flex-1 p-2 border rounded-full px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button type="submit" disabled={!input.trim()} className="bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700 disabled:bg-blue-300">
-                        <Send className="w-5 h-5" />
-                    </button>
-                </form>
+
+            {/* Input Area */}
+            <div className="p-4 border-t border-gray-200 bg-white">
+                {isReadOnly ? (
+                     <div className="text-center text-sm text-gray-500 p-3 bg-gray-100 rounded-lg">You are viewing this chat.</div>
+                ) : (
+                    <form onSubmit={handleSend} className="relative">
+                        <textarea
+                            value={input}
+                            onChange={handleInputChange}
+                            placeholder="Type a message..."
+                            rows={1}
+                            className="w-full p-3 pr-28 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none"
+                            style={{ minHeight: '52px', maxHeight: '150px' }}
+                            disabled={isReadOnly}
+                        />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <button type="button" disabled={isReadOnly} className="p-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"><Paperclip size={18} /></button>
+                            <button type="button" disabled={isReadOnly} className="p-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"><Smile size={18} /></button>
+                            <button type="submit" disabled={!input.trim() || isReadOnly} className="bg-black text-white rounded-md px-4 py-2 hover:bg-gray-800 disabled:bg-gray-300 transition-colors font-semibold">
+                                Send
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
         </div>
     );

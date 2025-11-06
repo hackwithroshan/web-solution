@@ -1,10 +1,19 @@
 import React from 'react';
 
+// FIX: Update Button component to support polymorphism with an 'as' prop.
+// This allows it to render as a different element type (e.g., a Link) and accept corresponding props.
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  as?: React.ElementType;
   variant?: 'primary' | 'secondary';
 }
 
-const Button: React.FC<ButtonProps> = ({ children, className, variant = 'primary', ...props }) => {
+const Button: React.FC<ButtonProps & { [key: string]: any }> = ({
+  as: Component = 'button',
+  children,
+  className,
+  variant = 'primary',
+  ...props
+}) => {
   const baseStyles = 'px-6 py-2.5 rounded-full font-semibold text-white transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 shadow-lg hover:shadow-xl';
   
   const variantStyles = {
@@ -13,9 +22,9 @@ const Button: React.FC<ButtonProps> = ({ children, className, variant = 'primary
   };
 
   return (
-    <button className={`${baseStyles} ${variantStyles[variant]} ${className}`} {...props}>
+    <Component className={`${baseStyles} ${variantStyles[variant]} ${className}`} {...props}>
       {children}
-    </button>
+    </Component>
   );
 };
 

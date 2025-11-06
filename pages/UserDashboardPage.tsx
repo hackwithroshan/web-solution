@@ -269,6 +269,13 @@ const UserDashboardPage: React.FC = () => {
        loadServices();
     };
 
+    const greeting = useMemo(() => {
+        const hour = new Date().getHours();
+        if (hour >= 5 && hour < 12) return 'Good Morning';
+        if (hour >= 12 && hour < 17) return 'Good Afternoon';
+        return 'Good Evening';
+    }, []);
+
 
     return (
         <div className="flex h-screen bg-gray-100 font-sans">
@@ -279,7 +286,7 @@ const UserDashboardPage: React.FC = () => {
                     <div className="max-w-7xl mx-auto">
                         <div className="flex justify-between items-center bg-blue-50/50 border border-blue-200/50 rounded-xl p-6 mb-8">
                             <div>
-                                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Good Morning, {user?.name}!</h1>
+                                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{greeting}, {user?.name}!</h1>
                                 <p className="mt-1 text-gray-600">Welcome back to your ApexNucleus dashboard.</p>
                             </div>
                             <div className="hidden sm:flex items-center space-x-2 bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">

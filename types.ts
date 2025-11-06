@@ -240,6 +240,29 @@ export interface Announcement {
   createdAt: string;
 }
 
+// Type for Consultation
+export interface Consultation {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+    message: string;
+    status: 'pending' | 'contacted';
+    createdAt: string;
+}
+
+// Type for Contact Form Submissions
+export interface ContactSubmission {
+    _id: string;
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+    status: 'new' | 'read' | 'archived';
+    createdAt: string;
+}
+
+
 // Type for Page Management
 export interface Page {
     _id: string;

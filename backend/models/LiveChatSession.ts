@@ -10,11 +10,16 @@ interface IChatMessage {
 
 export interface ILiveChatSession extends Document {
     user: {
-        _id: mongoose.Types.ObjectId | IUser;
+        _id?: mongoose.Types.ObjectId | IUser;
         name: string;
+        phone?: string;
     };
     userSocketId: string;
     adminSocketId?: string;
+    admin?: {
+        _id: mongoose.Types.ObjectId | IUser;
+        name: string;
+    };
     status: 'waiting' | 'active' | 'closed';
     history: IChatMessage[];
     createdAt: Date;
@@ -30,11 +35,16 @@ const ChatMessageSchema: Schema = new Schema({
 
 const LiveChatSessionSchema: Schema = new Schema({
     user: {
-        _id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        _id: { type: Schema.Types.ObjectId, ref: 'User' },
         name: { type: String, required: true },
+        phone: { type: String },
     },
     userSocketId: { type: String, required: true, index: true },
     adminSocketId: { type: String, index: true },
+    admin: {
+        _id: { type: Schema.Types.ObjectId, ref: 'User' },
+        name: { type: String }
+    },
     status: {
         type: String,
         enum: ['waiting', 'active', 'closed'],

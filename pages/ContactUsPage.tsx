@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
 import SeoMeta from '../components/SeoMeta';
 import RippleGrid from '../components/RippleGrid';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { Mail, Phone, MapPin, Send, User as UserIcon } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, User as UserIcon, Loader } from 'lucide-react';
+import { useToast } from '../hooks/useToast';
+import { submitContactForm } from '../services/api';
 
 const ContactInfoItem: React.FC<{ icon: React.ReactNode, title: string, content: string, href?: string }> = ({ icon, title, content, href }) => (
     <div className="flex items-start">
@@ -25,6 +27,27 @@ const ContactInfoItem: React.FC<{ icon: React.ReactNode, title: string, content:
 
 const ContactUsPage: React.FC = () => {
     useScrollAnimation();
+    const { addToast } = useToast();
+    const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            const result = await submitContactForm(formData);
+            addToast(result.message, 'success');
+            setFormData({ name: '', email: '', subject: '', message: '' }); // Clear form
+        } catch (error: any) {
+            addToast(error.message || 'Failed to send message.', 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <>
@@ -76,19 +99,22 @@ const ContactUsPage: React.FC = () => {
 
                             <div className="bg-[#2A2A3A] p-8 rounded-xl border border-white/10 scroll-animate slide-up delay-300">
                                 <h2 className="text-2xl font-bold mb-6">Send us a Message</h2>
-                                <form className="space-y-6">
-                                    <Input icon={<UserIcon className="w-5 h-5 text-gray-400" />} placeholder="Your Name" name="name" required />
-                                    <Input icon={<Mail className="w-5 h-5 text-gray-400" />} type="email" placeholder="Your Email" name="email" required />
-                                    <Input placeholder="Subject" name="subject" required />
+                                <form onSubmit={handleSubmit} className="space-y-6">
+                                    <Input icon={<UserIcon className="w-5 h-5 text-gray-400" />} placeholder="Your Name" name="name" value={formData.name} onChange={handleChange} required />
+                                    <Input icon={<Mail className="w-5 h-5 text-gray-400" />} type="email" placeholder="Your Email" name="email" value={formData.email} onChange={handleChange} required />
+                                    <Input placeholder="Subject" name="subject" value={formData.subject} onChange={handleChange} required />
                                     <textarea
                                         className="w-full border shadow-sm focus:outline-none focus:ring-2 transition-colors duration-200 py-3 bg-[#3A3A4A] text-gray-200 border-gray-600 focus:ring-blue-500 focus:border-blue-500 rounded-lg px-4"
                                         placeholder="Your Message"
                                         name="message"
                                         rows={5}
+                                        value={formData.message}
+                                        onChange={handleChange}
                                         required
                                     ></textarea>
-                                    <Button type="submit" className="w-full flex items-center justify-center">
-                                        <Send size={18} className="mr-2" /> Send Message
+                                    <Button type="submit" className="w-full flex items-center justify-center" disabled={isSubmitting}>
+                                        {isSubmitting ? <Loader className="animate-spin h-5 w-5 mr-2"/> : <Send size={18} className="mr-2" />}
+                                        {isSubmitting ? 'Sending...' : 'Send Message'}
                                     </Button>
                                 </form>
                             </div>

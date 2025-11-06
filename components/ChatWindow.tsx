@@ -12,8 +12,28 @@ import { io, Socket } from 'socket.io-client';
 import LiveChatInterface from './LiveChatInterface';
 import TypingIndicator from './ui/TypingIndicator';
 import FeedbackView from './ui/FeedbackView';
+import Input from './ui/Input';
 
-// --- SUB-COMPONENTS (Moved outside main component to prevent re-creation on re-render) ---
+// --- SUB-COMPONENTS ---
+
+const GuestFormView: React.FC<{
+  guestData: { name: string; phone: string };
+  onFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isLoading: boolean;
+}> = ({ guestData, onFormChange, onSubmit, isLoading }) => (
+    <main className="flex-1 p-5 overflow-y-auto flex flex-col justify-center">
+      <h3 className="font-semibold text-gray-800 text-center">Let's get you connected</h3>
+      <p className="text-sm text-gray-500 text-center mb-6">Please provide your details to start a chat.</p>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <Input name="name" placeholder="Your Name" value={guestData.name} onChange={onFormChange} required variant="light" />
+        <Input name="phone" type="tel" placeholder="Your Phone Number" value={guestData.phone} onChange={onFormChange} required variant="light" />
+        <Button type="submit" disabled={isLoading} className="w-full">
+          {isLoading ? <Loader className="animate-spin h-5 w-5 mx-auto" /> : 'Start Chat'}
+        </Button>
+      </form>
+    </main>
+);
 
 const HomeView: React.FC<{
   faqs: FAQ[];
@@ -219,65 +239,144 @@ export interface ChatWindowRef {
 }
 
 const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref) => {
-  type View = 'home' | 'chat' | 'contact' | 'callback' | 'ticket' | 'live_chat' | 'feedback';
-  const [view, setView] = useState<View>('home');
+  type View = 'guest_form' | 'home' | 'chat' | 'contact' | 'callback' | 'ticket' | 'live_chat' | 'feedback';
+  
+  const { user } = useAuth();
+  const [view, setView] = useState<View>(user ? 'live_chat' : 'guest_form');
+  const [isConnecting, setIsConnecting] = useState(!!user);
+
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [faqSearchTerm, setFaqSearchTerm] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { addToast } = useToast();
-  const { user } = useAuth();
   
   const socketRef = useRef<Socket | null>(null);
   const [activeLiveSession, setActiveLiveSession] = useState<{ id: string, user: any, history: ChatMessage[] } | null>(null);
   const [chatTypeForFeedback, setChatTypeForFeedback] = useState<'bot' | 'live_chat' | null>(null);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
-  // Ref to hold the latest messages for callbacks, improving performance.
   const messagesRef = useRef(messages);
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
+  const [guestData, setGuestData] = useState({ name: '', phone: '' });
   const [callbackData, setCallbackData] = useState({ phone: user?.phone || '', message: '' });
   const [newTicketData, setNewTicketData] = useState({ subject: '', message: '' });
 
   const filteredFaqs = useMemo(() => {
-    if (!faqSearchTerm.trim()) {
-        return faqs;
-    }
-    return faqs.filter(faq => 
-        faq.question.toLowerCase().includes(faqSearchTerm.toLowerCase())
-    );
+    if (!faqSearchTerm.trim()) return faqs;
+    return faqs.filter(faq => faq.question.toLowerCase().includes(faqSearchTerm.toLowerCase()));
   }, [faqs, faqSearchTerm]);
 
   const triggerFeedback = (chatType: 'bot' | 'live_chat') => {
     setChatTypeForFeedback(chatType);
     setView('feedback');
   };
-
-  const handleCallbackFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setCallbackData(prev => ({ ...prev, [name]: value }));
-  }, []);
   
-  const handleTicketFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const { name, value } = e.target;
-      setNewTicketData(prev => ({ ...prev, [name]: value }));
-  }, []);
+  const handleRequestLiveChat = useCallback(() => {
+    if (!socketRef.current || !user) return;
+    
+    setIsConnecting(true);
+    const timeout = setTimeout(() => {
+        setIsConnecting(false);
+        addToast('Connection timed out. No agents seem to be available. Please try again later.', 'error');
+        setView('home');
+    }, 15000);
+
+    socketRef.current.emit('requestLiveChat', { user: { _id: user._id, name: user.name }, history: messagesRef.current }, (sessionData: any) => {
+        clearTimeout(timeout);
+        setIsConnecting(false);
+        if (sessionData) {
+            const initialSystemMessage: ChatMessage = {
+                id: `system-initial-${Date.now()}`,
+                sender: MessageSender.BOT,
+                text: "You've been connected for live chat. An agent will be with you shortly.",
+                timestamp: new Date().toISOString()
+            };
+            setActiveLiveSession({
+                ...sessionData,
+                history: [...sessionData.history, initialSystemMessage]
+            });
+            setView('live_chat');
+        } else {
+            addToast('Could not start a live chat session. Please try again later.', 'error');
+            setView('home');
+        }
+    });
+  }, [user, addToast]);
+
+  const handleGuestSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!socketRef.current) return;
+      setIsConnecting(true);
+
+      const timeout = setTimeout(() => {
+          setIsConnecting(false);
+          addToast('Connection timed out. No agents seem to be available. Please try again later.', 'error');
+          setView('home');
+      }, 15000);
+
+      socketRef.current.emit('requestGuestLiveChat', { guestInfo: guestData, history: messagesRef.current }, (sessionData: any) => {
+          clearTimeout(timeout);
+          setIsConnecting(false);
+          if (sessionData) {
+              const initialSystemMessage: ChatMessage = {
+                  id: `system-initial-${Date.now()}`,
+                  sender: MessageSender.BOT,
+                  text: "You've been connected for live chat. An agent will be with you shortly.",
+                  timestamp: new Date().toISOString()
+              };
+              setActiveLiveSession({
+                  ...sessionData,
+                  history: [...sessionData.history, initialSystemMessage]
+              });
+              setView('live_chat');
+          } else {
+              addToast('Could not start a live chat session. Please try again later.', 'error');
+              setView('home');
+          }
+      });
+  };
+
+  useEffect(() => {
+    const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
+    const socket = io(socketUrl);
+    socketRef.current = socket;
+
+    const handleSessionEnded = () => {
+        addToast("The live chat session has ended.", "info");
+        setActiveLiveSession(null);
+        triggerFeedback('live_chat');
+    };
+
+    socket.on('chatSessionEnded', handleSessionEnded);
+    
+    if (user) {
+        handleRequestLiveChat();
+    } else {
+        setIsConnecting(false);
+    }
+    
+    return () => { 
+        socket.off('chatSessionEnded', handleSessionEnded);
+        socket.disconnect(); 
+    };
+  }, [user, addToast, handleRequestLiveChat]);
+
+
+  const handleCallbackFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { setCallbackData(prev => ({ ...prev, [e.target.name]: e.target.value })); }, []);
+  const handleTicketFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { setNewTicketData(prev => ({ ...prev, [e.target.name]: e.target.value })); }, []);
 
   const handleCloseAttempt = useCallback(() => {
     const isChattingWithBot = view === 'chat' && (messages.length > 1 || selectedFile);
     const isLiveChatting = view === 'live_chat';
 
-    if (isChattingWithBot) {
-        triggerFeedback('bot');
-    } else if (isLiveChatting) {
+    if (isChattingWithBot) { triggerFeedback('bot'); } 
+    else if (isLiveChatting) {
         if (window.confirm('Are you sure you want to end this chat session?')) {
             if (socketRef.current && activeLiveSession) {
                 socketRef.current.emit('endLiveChat', activeLiveSession.id);
@@ -286,11 +385,9 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
     } else {
         onClose();
     }
-  }, [view, messages, activeLiveSession, onClose, socketRef, selectedFile]);
+  }, [view, messages, activeLiveSession, onClose, selectedFile]);
 
-  useImperativeHandle(ref, () => ({
-    handleCloseAttempt
-  }));
+  useImperativeHandle(ref, () => ({ handleCloseAttempt }));
 
   useEffect(() => {
     if(view === 'home') {
@@ -305,34 +402,13 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
         loadFAQs();
     }
   }, [view, addToast]);
-
-  useEffect(() => {
-    if (!user) return;
-    const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
-    socketRef.current = io(socketUrl);
-    socketRef.current.on('connect', () => {});
-    
-    socketRef.current.on('chatSessionEnded', () => {
-        addToast("The live chat session has ended.", "info");
-        setActiveLiveSession(null);
-        triggerFeedback('live_chat');
-    });
-    return () => { 
-        socketRef.current?.off('chatSessionEnded');
-        socketRef.current?.disconnect(); 
-    };
-  }, [user, addToast]);
   
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
-
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
         textarea.style.height = 'auto';
-        const scrollHeight = textarea.scrollHeight;
-        textarea.style.height = `${scrollHeight}px`;
+        textarea.style.height = `${textarea.scrollHeight}px`;
     }
   }, [input]);
   
@@ -341,24 +417,14 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
     if ((!input.trim() && !selectedFile) || isLoading) return;
 
     let userMessage: ChatMessage;
-
     if (selectedFile) {
         userMessage = { 
-            id: uuidv4(), 
-            sender: MessageSender.USER, 
-            text: input, 
-            timestamp: new Date().toISOString(), 
-            status: 'sent',
-            attachment: {
-                url: URL.createObjectURL(selectedFile),
-                name: selectedFile.name,
-                type: 'image'
-            }
+            id: uuidv4(), sender: MessageSender.USER, text: input, timestamp: new Date().toISOString(), status: 'sent',
+            attachment: { url: URL.createObjectURL(selectedFile), name: selectedFile.name, type: 'image' }
         };
     } else {
         userMessage = { id: uuidv4(), sender: MessageSender.USER, text: input, timestamp: new Date().toISOString(), status: 'sent' };
     }
-
     setMessages(prev => [...prev, userMessage]);
     
     const fileToSend = selectedFile;
@@ -368,11 +434,9 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
 
     try {
       const botResponseText = await getChatbotResponse(input, messages, fileToSend);
-      const botMessage: ChatMessage = { id: uuidv4(), sender: MessageSender.BOT, text: botResponseText, timestamp: new Date().toISOString() };
-      setMessages(prev => [...prev, botMessage]);
+      setMessages(prev => [...prev, { id: uuidv4(), sender: MessageSender.BOT, text: botResponseText, timestamp: new Date().toISOString() }]);
     } catch (error) {
-       const errorMessage: ChatMessage = { id: uuidv4(), sender: MessageSender.BOT, text: "Sorry, I couldn't process that. Please try again.", timestamp: new Date().toISOString() };
-      setMessages(prev => [...prev, errorMessage]);
+       setMessages(prev => [...prev, { id: uuidv4(), sender: MessageSender.BOT, text: "Sorry, I couldn't process that. Please try again.", timestamp: new Date().toISOString() }]);
     } finally {
         setIsLoading(false);
     }
@@ -394,11 +458,8 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
         addToast("We've received your request and will call you back shortly.", 'success');
         setCallbackData({ phone: user?.phone || '', message: '' });
         setView('home');
-    } catch (error: any) {
-        addToast(error.message || 'Failed to send request.', 'error');
-    } finally {
-        setIsLoading(false);
-    }
+    } catch (error: any) { addToast(error.message || 'Failed to send request.', 'error'); } 
+    finally { setIsLoading(false); }
   }, [callbackData, addToast, user]);
 
   const handleTicketSubmit = useCallback(async (e: React.FormEvent) => {
@@ -409,76 +470,32 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
         addToast("Support ticket created successfully!", 'success');
         setNewTicketData({ subject: '', message: '' });
         setView('home');
-    } catch (error: any) {
-        addToast(error.message || 'Failed to create ticket.', 'error');
-    } finally {
-        setIsLoading(false);
-    }
+    } catch (error: any) { addToast(error.message || 'Failed to create ticket.', 'error'); }
+    finally { setIsLoading(false); }
   }, [newTicketData, addToast]);
-
-  const handleRequestLiveChat = useCallback(() => {
-    if (isConnecting) return;
-
-    setIsConnecting(true);
-    if (socketRef.current && user) {
-        const timeout = setTimeout(() => {
-            setIsConnecting(false);
-            addToast('Connection timed out. Please try again.', 'error');
-        }, 10000); // 10 second timeout
-
-        socketRef.current.emit('requestLiveChat', { user: { _id: user._id, name: user.name }, history: messagesRef.current }, (sessionData: any) => {
-            clearTimeout(timeout);
-            setIsConnecting(false);
-            if (sessionData) {
-                const initialSystemMessage: ChatMessage = {
-                    id: `system-initial-${Date.now()}`,
-                    sender: MessageSender.BOT,
-                    text: "You've been connected for live chat. An agent will be with you shortly.",
-                    timestamp: new Date().toISOString()
-                };
-                setActiveLiveSession({
-                    ...sessionData,
-                    history: [...sessionData.history, initialSystemMessage]
-                });
-                setView('live_chat');
-            } else {
-                addToast('Could not start a live chat session. Please try again.', 'error');
-            }
-        });
-    } else {
-        setIsConnecting(false);
-        addToast('Could not connect to live chat. Please refresh and try again.', 'error');
-    }
-  }, [user, addToast, isConnecting]);
 
   const handleFeedbackSubmit = async (rating: number, comment: string) => {
     if (!chatTypeForFeedback) return;
     setIsSubmittingFeedback(true);
     try {
         await submitChatFeedback({
-            chatType: chatTypeForFeedback,
-            rating,
-            comment,
+            chatType: chatTypeForFeedback, rating, comment,
             sessionId: (chatTypeForFeedback === 'live_chat' && activeLiveSession) ? activeLiveSession.id : undefined
         });
         addToast("Thank you for your feedback!", 'success');
-    } catch (error: any) {
-        addToast(error.message || 'Could not submit feedback.', 'error');
-    } finally {
+    } catch (error: any) { addToast(error.message || 'Could not submit feedback.', 'error'); }
+    finally {
         setIsSubmittingFeedback(false);
         onClose();
     }
   };
 
   const handleBack = useCallback(() => {
-      if (view === 'live_chat' || view === 'feedback') return;
-      setView('home');
-  }, [view]);
+      if (view === 'live_chat' || view === 'feedback' || view === 'guest_form') return;
+      setView(user ? 'home' : 'guest_form'); // Go back to guest form if not logged in
+  }, [view, user]);
 
-  const handleChatInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-  }, []);
-
+  const handleChatInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => { setInput(e.target.value); }, []);
   const handleChatInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -490,25 +507,30 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
   
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-        setSelectedFile(file);
-    } else if (file) {
-        addToast('Please select an image file.', 'error');
-    }
+    if (file && file.type.startsWith('image/')) { setSelectedFile(file); } 
+    else if (file) { addToast('Please select an image file.', 'error'); }
   };
 
   const renderView = () => {
     switch(view) {
+        case 'guest_form': return <GuestFormView guestData={guestData} onFormChange={(e) => setGuestData(prev => ({...prev, [e.target.name]: e.target.value}))} onSubmit={handleGuestSubmit} isLoading={isConnecting} />;
         case 'home': return <HomeView faqs={filteredFaqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} onRequestLiveChat={handleRequestLiveChat} isConnecting={isConnecting} searchTerm={faqSearchTerm} onSearchChange={e => setFaqSearchTerm(e.target.value)} />;
         case 'chat': return <ChatView messages={messages} input={input} onInputChange={handleChatInputChange} onKeyDown={handleChatInputKeyDown} onSubmit={handleSend} isLoading={isLoading} textareaRef={textareaRef} messagesEndRef={messagesEndRef} selectedFile={selectedFile} onFileSelect={handleFileSelect} onFileRemove={() => setSelectedFile(null)} />;
         case 'contact': return <ContactView onRequestLiveChat={handleRequestLiveChat} onCallbackClick={() => setView('callback')} onTicketClick={() => setView('ticket')} isConnecting={isConnecting} />;
         case 'callback': return <CallbackView callbackData={callbackData} onFormChange={handleCallbackFormChange} onSubmit={handleCallbackSubmit} isLoading={isLoading} />;
         case 'ticket': return <TicketView newTicketData={newTicketData} onFormChange={handleTicketFormChange} onSubmit={handleTicketSubmit} isLoading={isLoading} />;
         case 'live_chat': 
+            if (isConnecting) {
+                return (
+                    <div className="flex-1 flex flex-col justify-center items-center p-5">
+                        <Loader className="animate-spin w-8 h-8 text-blue-500" />
+                        <p className="mt-4 text-gray-600">Connecting to a support agent...</p>
+                    </div>
+                );
+            }
             if (!activeLiveSession || !socketRef.current) {
-                setView('home');
-                addToast('Live chat session ended unexpectedly.', 'error');
-                return null;
+                // This state can happen if connection fails after initial attempt. Fall back to home.
+                return <HomeView faqs={filteredFaqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} onRequestLiveChat={handleRequestLiveChat} isConnecting={false} searchTerm={faqSearchTerm} onSearchChange={e => setFaqSearchTerm(e.target.value)} />;
             }
             return (
               <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
@@ -517,29 +539,24 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
                     initialHistory={activeLiveSession.history}
                     socket={socketRef.current}
                     onEndChat={handleCloseAttempt}
+                    user={activeLiveSession.user}
                 />
               </div>
             );
         case 'feedback': 
-            if (!chatTypeForFeedback) {
-                onClose();
-                return null;
-            }
-            return <FeedbackView 
-                        chatType={chatTypeForFeedback}
-                        onSubmit={handleFeedbackSubmit}
-                        onSkip={onClose}
-                        isSubmitting={isSubmittingFeedback}
-                    />;
+            if (!chatTypeForFeedback) { onClose(); return null; }
+            return <FeedbackView chatType={chatTypeForFeedback} onSubmit={handleFeedbackSubmit} onSkip={onClose} isSubmitting={isSubmittingFeedback} />;
         default: return <HomeView faqs={faqs} onFaqClick={handleFaqClick} onContactClick={() => setView('contact')} onRequestLiveChat={handleRequestLiveChat} isConnecting={isConnecting} searchTerm={faqSearchTerm} onSearchChange={e => setFaqSearchTerm(e.target.value)} />;
     }
   };
 
-  const viewTitles: Record<View, string> = { home: 'Help Center', chat: 'Support Bot', contact: 'Contact Us', callback: 'Request a Callback', ticket: 'Create a Ticket', live_chat: 'Live Chat', feedback: 'Provide Feedback' };
+  const viewTitles: Record<View, string> = { guest_form: 'Live Support', home: 'Help Center', chat: 'Support Bot', contact: 'Contact Us', callback: 'Request a Callback', ticket: 'Create a Ticket', live_chat: 'Live Chat', feedback: 'Provide Feedback' };
   const Subtitle = () => {
     if (view === 'home') return <p className="text-xs opacity-80">How can we help you today?</p>;
+    if (view === 'guest_form') return <p className="text-xs opacity-80">Connect with an agent</p>;
     if (view === 'contact') return <p className="text-xs opacity-80">Select an option below</p>;
     if (view === 'live_chat' && activeLiveSession) return <p className="text-xs opacity-80">You are chatting with an agent</p>;
+    if (view === 'live_chat' && isConnecting) return <p className="text-xs opacity-80">Please wait a moment...</p>;
     if (view === 'feedback') return <p className="text-xs opacity-80">Your opinion is important to us</p>;
     return null;
   };
@@ -548,7 +565,7 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
     <div className="fixed inset-0 sm:inset-auto sm:absolute sm:bottom-20 sm:right-5 sm:w-[350px] sm:h-[550px] bg-white sm:rounded-xl shadow-2xl flex flex-col pointer-events-auto animate-slide-in-up">
       <header className="p-4 bg-gray-800 text-white sm:rounded-t-xl flex justify-between items-center flex-shrink-0">
         <div className="flex items-center gap-3">
-          {view !== 'home' && view !== 'feedback' && (
+          {view !== 'home' && view !== 'live_chat' && view !== 'feedback' && view !== 'guest_form' && (
             <button onClick={handleBack} aria-label="Back">
               <ArrowLeft size={20} />
             </button>

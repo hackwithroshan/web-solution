@@ -19,30 +19,28 @@ const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const ServicePlanCardSkeleton: React.FC = () => (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col">
-        <div className="flex-grow">
-            <div className="flex justify-between items-start">
-                <div>
-                    <Skeleton className="h-5 w-32 rounded" />
-                    <Skeleton className="h-4 w-20 mt-2 rounded" />
-                </div>
-                <Skeleton className="h-6 w-16 rounded-full" />
-            </div>
-            <Skeleton className="h-4 w-full mt-4 rounded" />
-            <Skeleton className="h-4 w-5/6 mt-2 rounded" />
-            <div className="my-5">
-                <Skeleton className="h-8 w-28 rounded" />
-            </div>
-            <div className="border-t border-gray-200 my-5"></div>
-            <Skeleton className="h-4 w-24 mb-4 rounded" />
-            <div className="space-y-3">
-                <Skeleton className="h-5 w-full rounded" />
-                <Skeleton className="h-5 w-full rounded" />
-                <Skeleton className="h-5 w-full rounded" />
-            </div>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+        {/* Top Section */}
+        <div className="flex flex-col items-center p-6 bg-slate-50 border-b border-slate-100 text-center">
+            <Skeleton className="w-16 h-16 rounded-full mb-4" />
+            <Skeleton className="h-6 w-3/4 rounded mb-2" />
+            <Skeleton className="h-4 w-1/2 rounded" />
         </div>
-        <div className="mt-6">
-            <Skeleton className="h-10 w-full rounded-md" />
+        
+        {/* Bottom Section */}
+        <div className="p-6 flex flex-col flex-grow">
+            <div className="flex flex-col items-center mb-6">
+                <Skeleton className="h-10 w-1/3 rounded mb-2" />
+                <Skeleton className="h-3 w-2/3 rounded" />
+            </div>
+
+            <div className="space-y-3 mb-6 flex-grow">
+                <Skeleton className="h-5 w-full rounded" />
+                <Skeleton className="h-5 w-5/6 rounded" />
+                <Skeleton className="h-5 w-full rounded" />
+            </div>
+            
+            <Skeleton className="h-10 w-full rounded-full mt-auto" />
         </div>
     </div>
 );
@@ -62,7 +60,7 @@ const AllServicesPage: React.FC = () => {
     
     const { addToast } = useToast();
     const { user } = useAuth();
-    const { addToCart } = useCart();
+    const { addToCart, clearCart } = useCart();
     const navigate = useNavigate();
 
     // State for domain modal
@@ -143,7 +141,7 @@ const AllServicesPage: React.FC = () => {
 
     const handleAddToCart = (plan: ServicePlan) => {
         if (!user) {
-            addToast('Please log in to add items to your cart.', 'info');
+            addToast('Please log in to purchase a service.', 'info');
             navigate('/login');
             return;
         }
@@ -151,8 +149,9 @@ const AllServicesPage: React.FC = () => {
             setSelectedPlan(plan);
             setIsDomainModalOpen(true);
         } else {
+            clearCart();
             addToCart(plan);
-            addToast(`${plan.name} added to cart!`, 'success');
+            navigate('/user/checkout');
         }
     };
 
@@ -164,12 +163,9 @@ const AllServicesPage: React.FC = () => {
         }
 
         if (selectedPlan) {
+            clearCart();
             addToCart(selectedPlan, domainName);
-            addToast(`${selectedPlan.name} for ${domainName} added to cart!`, 'success');
-            setIsDomainModalOpen(false);
-            setDomainName('');
-            setSelectedPlan(null);
-            setDomainError('');
+            navigate('/user/checkout');
         }
     };
 
@@ -185,8 +181,8 @@ const AllServicesPage: React.FC = () => {
                             <p className="mt-1 text-gray-600">Browse and purchase new services to expand your digital toolkit.</p>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                            <div className="lg:col-span-1">
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+                            <div className="lg:col-span-1 lg:sticky top-8">
                                <ServiceFilterSidebar
                                     categories={categories}
                                     selectedCategories={selectedCategories}
@@ -223,13 +219,13 @@ const AllServicesPage: React.FC = () => {
                                 </div>
 
                                 {isLoading ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {Array.from({ length: 4 }).map((_, index) => (
                                             <ServicePlanCardSkeleton key={index} />
                                         ))}
                                     </div>
                                 ) : filteredAndSortedPlans.length > 0 ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {filteredAndSortedPlans.map(plan => (
                                             <ServicePlanCard 
                                                 key={plan._id} 

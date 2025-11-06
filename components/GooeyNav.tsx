@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 interface GooeyNavItem {
   label: string;
   href: string;
+  isMegaMenuTrigger?: boolean;
+  onMouseEnter?: (event: React.MouseEvent<HTMLLIElement>) => void;
+  onMouseLeave?: (event: React.MouseEvent<HTMLLIElement>) => void;
 }
 
 interface GooeyNavProps {
@@ -112,11 +115,13 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     e.preventDefault();
     const liEl = e.currentTarget.parentElement as HTMLLIElement;
     if (!liEl) return;
+    
+    const item = items[index];
 
     const targetPath = e.currentTarget.getAttribute('href');
     if (!targetPath) return;
 
-    if (activeIndex === index) {
+    if (activeIndex === index && !item?.isMegaMenuTrigger) {
       navigate(targetPath);
       return;
     }
@@ -138,8 +143,10 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     if (filterRef.current) {
       makeParticles(filterRef.current);
     }
-
-    navigate(targetPath);
+    
+    if (!item?.isMegaMenuTrigger) {
+      navigate(targetPath);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>, index: number) => {
@@ -156,13 +163,13 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     if (!navRef.current || !containerRef.current || !textRef.current) return;
     const activeLi = navRef.current.querySelectorAll('li')[activeIndex];
     if (activeLi) {
-      updateEffectPosition(activeLi);
+      updateEffectPosition(activeLi as HTMLElement);
       textRef.current.classList.add('active');
     }
     const resizeObserver = new ResizeObserver(() => {
       const currentActiveLi = navRef.current?.querySelectorAll('li')[activeIndex];
       if (currentActiveLi) {
-        updateEffectPosition(currentActiveLi);
+        updateEffectPosition(currentActiveLi as HTMLElement);
       }
     });
     resizeObserver.observe(containerRef.current);
@@ -330,6 +337,8 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
                 className={`gooey-nav-li rounded-full relative cursor-pointer transition-[background-color_color_box-shadow] duration-300 ease shadow-[0_0_0.5px_1.5px_transparent] text-white font-medium ${
                   activeIndex === index ? 'active' : ''
                 }`}
+                onMouseEnter={item.onMouseEnter}
+                onMouseLeave={item.onMouseLeave}
               >
                 <a
                   onClick={e => handleClick(e, index)}

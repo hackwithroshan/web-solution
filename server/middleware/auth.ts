@@ -1,7 +1,7 @@
 // FIX: Add explicit types for Request, Response, and NextFunction.
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import User, { IUser } from '../models/User';
+import User from '../models/User';
 // FIX: Import `Multer` directly to bring the namespace into scope for type augmentation.
 import Multer from 'multer';
 // FIX: Import mongoose to use its Document type, aligning this declaration with the one in `backend/middleware/auth.ts` to resolve a type conflict.

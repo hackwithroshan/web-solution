@@ -71,59 +71,10 @@ const importData = async () => {
 
     // Create payments for 'Alice Johnson'
     const paymentsToCreate = [
-        { user: regularUser._id, order: new mongoose.Types.ObjectId(), amount: 59.00, transactionId: crypto.randomBytes(8).toString('hex').toUpperCase(), date: new Date(new Date().setMonth(new Date().getMonth() - 1)) },
-        { user: regularUser._id, order: new mongoose.Types.ObjectId(), amount: 15.00, transactionId: crypto.randomBytes(8).toString('hex').toUpperCase(), date: new Date(new Date().setMonth(new Date().getMonth() - 2)) },
-        { user: regularUser._id, order: new mongoose.Types.ObjectId(), amount: 49.00, transactionId: crypto.randomBytes(8).toString('hex').toUpperCase(), date: new Date(new Date().setMonth(new Date().getMonth() - 3)) },
+        { user: regularUser._id, order: new mongoose.Types.ObjectId(), amount: 59.00, transactionId: crypto.randomBytes(12).toString('hex'), date: new Date(new Date().setMonth(new Date().getMonth() - 1)) },
+        { user: regularUser._id, order: new mongoose.Types.ObjectId(), amount: 15.00, transactionId: crypto.randomBytes(12).toString('hex'), date: new Date(new Date().setMonth(new Date().getMonth() - 2)) },
     ];
-    // @ts-ignore
     await Payment.insertMany(paymentsToCreate);
-    
-    // Create Categories
-    const categories = await Category.insertMany([
-        { name: 'Domain Registration' },
-        { name: 'Web Hosting' },
-        { name: 'Web Development' },
-        { name: 'Social Media Marketing' },
-        { name: 'Podcast Studio' },
-    ]);
-    
-    const categoryMap = categories.reduce((map, category) => {
-        // FIX: Convert ObjectId to string to match the Record<string, string> type.
-        map[category.name] = category._id.toString();
-        return map;
-    }, {} as Record<string, string>);
-
-    // Create Service Plans
-    await ServicePlan.insertMany([
-      {
-        name: 'Starter Hosting',
-        category: categoryMap['Web Hosting'],
-        price: 299,
-        priceUnit: '/month',
-        description: 'For small projects and personal sites.',
-        keyFeatures: ['1 Website', '10GB SSD Storage', '1TB Bandwidth', 'Free SSL Certificate', '24/7 Support'],
-        tags: []
-      },
-      {
-        name: 'Business Hosting',
-        category: categoryMap['Web Hosting'],
-        price: 599,
-        priceUnit: '/month',
-        description: 'Ideal for growing businesses and professionals.',
-        keyFeatures: ['10 Websites', '50GB SSD Storage', '5TB Bandwidth', 'Free SSL Certificate', 'Priority Support'],
-        tags: ['featured']
-      },
-      {
-        name: 'Podcast Studio Hour',
-        category: categoryMap['Podcast Studio'],
-        price: 100,
-        priceUnit: '/project',
-        description: 'One hour of studio time.',
-        keyFeatures: ['Professional microphone', 'Soundproofed room'],
-        tags: []
-      }
-    ]);
-
 
     console.log('Database seeded successfully!');
     process.exit();
@@ -140,8 +91,8 @@ const destroyData = async () => {
         await Category.deleteMany();
         await ServicePlan.deleteMany();
         await Payment.deleteMany();
-        await Notification.deleteMany();
-        await Announcement.deleteMany();
+        await Notification.deleteMany({});
+        await Announcement.deleteMany({});
         console.log('Data Destroyed!');
         process.exit();
     } catch (error) {

@@ -1,4 +1,4 @@
-import { User, AdminService, ServicePlan, ServiceCategory, UserService, Payment, Ticket, Message, AdminStats, UserRole, FAQ, ChatbotKnowledge, Notification, Announcement, Page, BlogPost } from '../types';
+import { User, AdminService, ServicePlan, ServiceCategory, UserService, Payment, Ticket, Message, AdminStats, UserRole, FAQ, ChatbotKnowledge, Notification, Announcement, Page, BlogPost, Consultation, ContactSubmission } from '../types';
 
 // The API_URL is determined based on the hostname.
 const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
@@ -97,6 +97,7 @@ export const adminAddServiceToUser = (userId: string, serviceData: object): Prom
 export const adminUpdateUserService = (userId: string, serviceId: string, serviceData: object): Promise<UserService> => apiFetch(`/api/admin/users/${userId}/services/${serviceId}`, { method: 'PUT', body: JSON.stringify(serviceData) });
 export const adminDeleteUserService = (userId: string, serviceId: string): Promise<{ message: string }> => apiFetch(`/api/admin/users/${userId}/services/${serviceId}`, { method: 'DELETE' });
 export const fetchAdminLiveChats = (): Promise<any[]> => apiFetch('/api/admin/live-chats');
+export const fetchAdminLiveChatById = (sessionId: string): Promise<any> => apiFetch(`/api/admin/live-chats/${sessionId}`);
 
 // Admin Service & Plan Management
 export const fetchAdminServicePlans = (): Promise<ServicePlan[]> => apiFetch('/api/admin/service-plans');
@@ -202,3 +203,13 @@ export const submitChatFeedback = (feedbackData: FeedbackData): Promise<{ messag
 
 // --- Consultation ---
 export const requestConsultation = (data: { name: string, email: string, phone: string, message: string }): Promise<{ message: string }> => apiFetch('/api/consultations/request', { method: 'POST', body: JSON.stringify(data) });
+export const fetchAdminConsultations = (): Promise<Consultation[]> => apiFetch('/api/admin/consultations');
+export const updateConsultationStatus = (id: string, status: 'pending' | 'contacted'): Promise<Consultation> => apiFetch(`/api/admin/consultations/${id}`, { method: 'PUT', body: JSON.stringify({ status }) });
+
+// --- Contact Form ---
+export const submitContactForm = (data: { name: string, email: string, subject: string, message: string }): Promise<{ message: string }> => apiFetch('/api/contact', { method: 'POST', body: JSON.stringify(data) });
+export const fetchContactSubmissions = (): Promise<ContactSubmission[]> => apiFetch('/api/admin/contact-submissions');
+export const updateContactSubmissionStatus = (id: string, status: 'new' | 'read' | 'archived'): Promise<ContactSubmission> => apiFetch(`/api/admin/contact-submissions/${id}`, { method: 'PUT', body: JSON.stringify({ status }) });
+
+// --- Newsletter Subscription ---
+export const subscribeToNewsletter = (email: string): Promise<{ message: string }> => apiFetch('/api/subscribe', { method: 'POST', body: JSON.stringify({ email }) });

@@ -11,11 +11,7 @@ const router = express.Router();
 router.get('/:id/services', protect, async (req: Request, res: Response) => {
     try {
         const services = await Service.find({ user: req.params.id });
-        if (services) {
-            res.json(services);
-        } else {
-            res.status(404).json({ message: 'Services not found' });
-        }
+        res.json(services);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
