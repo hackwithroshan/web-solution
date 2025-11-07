@@ -22,7 +22,6 @@ const SupportDashboardPage: React.FC = () => {
     const [liveChats, setLiveChats] = useState<any[]>([]);
     const [selectedSession, setSelectedSession] = useState<{ id: string, user: any, history: ChatMessage[], admin?: any } | null>(null);
     const notificationSoundRef = useRef(new Audio('https://res.cloudinary.com/dvrqft9ov/video/upload/v1761992826/mixkit-software-interface-start-2574_nsv3uq.wav'));
-    const [isRinging, setIsRinging] = useState(false);
 
     // State for filters
     const [activeInboxFilter, setActiveInboxFilter] = useState('All');
@@ -41,6 +40,11 @@ const SupportDashboardPage: React.FC = () => {
         }
     };
     
+    const selectedSessionRef = useRef(selectedSession);
+    useEffect(() => {
+        selectedSessionRef.current = selectedSession;
+    }, [selectedSession]);
+
     const handleSelectChat = useCallback(async (chat: any) => {
         if (chat.status === 'waiting') {
             socketRef.current?.emit('adminJoinsChat', { sessionId: chat._id, adminUser: supportUser });
@@ -85,6 +89,12 @@ const SupportDashboardPage: React.FC = () => {
         const handleNewChat = (newChat: any) => {
             addToast(`New chat request from ${newChat.user.name}`, 'info');
             showBrowserNotification('New Chat Request', `From: ${newChat.user.name}`);
+            
+            // Only play sound if this agent is not already in a chat.
+            if (!selectedSessionRef.current) {
+                notificationSoundRef.current.play().catch(error => console.log("Audio play failed:", error));
+            }
+
             setLiveChats(prev => {
                 if (prev.some(c => c._id === newChat._id)) return prev;
                 return [...prev, newChat];
@@ -141,36 +151,6 @@ const SupportDashboardPage: React.FC = () => {
             socket.disconnect();
         };
     }, [addToast]);
-
-    // Effect to control the looping notification sound
-    useEffect(() => {
-        const waitingChats = liveChats.filter(c => c.status === 'waiting').length;
-        const isAdminInChat = !!selectedSession;
-
-        if (waitingChats > 0 && !isAdminInChat) {
-            setIsRinging(true);
-        } else {
-            setIsRinging(false);
-        }
-    }, [liveChats, selectedSession]);
-
-    // Effect to play/pause audio based on isRinging state
-    useEffect(() => {
-        const audio = notificationSoundRef.current;
-        audio.loop = true;
-
-        if (isRinging) {
-            audio.play().catch(error => console.log("Audio loop failed:", error));
-        } else {
-            audio.pause();
-            audio.currentTime = 0;
-        }
-
-        return () => { // Cleanup on unmount
-            audio.pause();
-            audio.currentTime = 0;
-        };
-    }, [isRinging]);
 
     const counts = useMemo(() => ({
         unassigned: liveChats.filter(c => c.status === 'waiting').length,

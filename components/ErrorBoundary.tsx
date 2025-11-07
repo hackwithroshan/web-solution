@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -8,10 +8,10 @@ interface State {
   hasError: boolean;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  state: State = {
-    hasError: false
-  };
+class ErrorBoundary extends React.Component<Props, State> {
+  // FIX: Use a class property to initialize state. This resolves type errors where
+  // `this.state` and `this.props` were not being recognized on the component instance.
+  state: State = { hasError: false };
 
   static getDerivedStateFromError(_: Error): State {
     // Update state so the next render will show the fallback UI.

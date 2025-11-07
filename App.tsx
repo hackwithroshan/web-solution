@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { ToastProvider } from './hooks/useToast';
 import { CartProvider } from './hooks/useCart';
@@ -79,6 +79,11 @@ const ScrollToTop = () => {
 };
 
 const AppContent: React.FC = () => {
+  const location = useLocation();
+  const isDashboardPage = location.pathname.startsWith('/user/') ||
+                          location.pathname.startsWith('/admin/') ||
+                          location.pathname.startsWith('/support/');
+
   // Global auth error listener
   useEffect(() => {
     const handleAuthError = () => {
@@ -96,7 +101,7 @@ const AppContent: React.FC = () => {
   
   return (
     <>
-      <Header />
+      {!isDashboardPage && <Header />}
       <main className="font-sans">
         <Routes>
           {/* Public Routes */}
@@ -156,7 +161,7 @@ const AppContent: React.FC = () => {
 
         </Routes>
       </main>
-      <Footer />
+      {!isDashboardPage && <Footer />}
       <ChatWidget />
     </>
   );

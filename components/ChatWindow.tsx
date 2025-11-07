@@ -281,14 +281,8 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
     if (!socketRef.current || !user) return;
     
     setIsConnecting(true);
-    const timeout = setTimeout(() => {
-        setIsConnecting(false);
-        addToast('Connection timed out. No agents seem to be available. Please try again later.', 'error');
-        setView('home');
-    }, 15000);
-
+    
     socketRef.current.emit('requestLiveChat', { user: { _id: user._id, name: user.name }, history: messagesRef.current }, (sessionData: any) => {
-        clearTimeout(timeout);
         setIsConnecting(false);
         if (sessionData) {
             const initialSystemMessage: ChatMessage = {
@@ -303,7 +297,7 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
             });
             setView('live_chat');
         } else {
-            addToast('Could not start a live chat session. Please try again later.', 'error');
+            addToast('Could not start a live chat session. No agents seem to be available. Please try again later.', 'error');
             setView('home');
         }
     });
@@ -314,14 +308,7 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
       if (!socketRef.current) return;
       setIsConnecting(true);
 
-      const timeout = setTimeout(() => {
-          setIsConnecting(false);
-          addToast('Connection timed out. No agents seem to be available. Please try again later.', 'error');
-          setView('home');
-      }, 15000);
-
       socketRef.current.emit('requestGuestLiveChat', { guestInfo: guestData, history: messagesRef.current }, (sessionData: any) => {
-          clearTimeout(timeout);
           setIsConnecting(false);
           if (sessionData) {
               const initialSystemMessage: ChatMessage = {
@@ -336,7 +323,7 @@ const ChatWindow = forwardRef<ChatWindowRef, ChatWindowProps>(({ onClose }, ref)
               });
               setView('live_chat');
           } else {
-              addToast('Could not start a live chat session. Please try again later.', 'error');
+              addToast('Could not start a live chat session. No agents seem to be available. Please try again later.', 'error');
               setView('home');
           }
       });

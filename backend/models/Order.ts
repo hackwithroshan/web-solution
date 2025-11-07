@@ -8,6 +8,8 @@ export type OrderItemType = 'new_purchase' | 'renewal';
 export interface IOrderItem {
     plan?: mongoose.Types.ObjectId | IServicePlan;
     service?: mongoose.Types.ObjectId | IService;
+    tierName?: 'Starter' | 'Professional' | 'Enterprise';
+    billingCycle?: 'monthly' | 'yearly';
     itemType: OrderItemType;
     price: number;
     domainName?: string;
@@ -16,6 +18,8 @@ export interface IOrderItem {
 export interface IOrder extends Document {
     user: mongoose.Types.ObjectId | IUser;
     items: IOrderItem[];
+    subtotal: number;
+    taxAmount: number;
     totalAmount: number;
     status: 'pending' | 'completed' | 'failed';
     razorpayOrderId?: string;
@@ -24,6 +28,8 @@ export interface IOrder extends Document {
 const OrderItemSchema: Schema = new Schema({
     plan: { type: Schema.Types.ObjectId, ref: 'ServicePlan' },
     service: { type: Schema.Types.ObjectId, ref: 'Service' },
+    tierName: { type: String, enum: ['Starter', 'Professional', 'Enterprise'] },
+    billingCycle: { type: String, enum: ['monthly', 'yearly'] },
     itemType: { type: String, enum: ['new_purchase', 'renewal'], required: true },
     price: { type: Number, required: true },
     domainName: { type: String },
@@ -32,6 +38,8 @@ const OrderItemSchema: Schema = new Schema({
 const OrderSchema: Schema = new Schema({
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     items: [OrderItemSchema],
+    subtotal: { type: Number, required: true },
+    taxAmount: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
     status: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
     razorpayOrderId: { type: String },

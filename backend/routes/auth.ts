@@ -198,8 +198,7 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
                 throw new ApiError(500, "Server configuration error: Frontend URL not set and origin header not available.");
             }
             
-            // The frontend uses HashRouter, so the path needs a '#'
-            const resetUrl = `${frontendUrl}/#/reset-password/${resetToken}`;
+            const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
             
             // Await the email sending. If it throws, the catch block will handle it.
             await sendPasswordResetEmail(user.email, resetUrl);

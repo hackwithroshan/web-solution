@@ -21,7 +21,7 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ message, isOwn, showAvatar }) =
   
   // Use a bot icon for system messages
   const systemIcon = <div className="bg-gray-200 p-2 rounded-full flex-shrink-0"><Bot className="w-5 h-5 text-gray-600" /></div>;
-  const isSystemMessage = message.sender === 'bot' && !isOwn; // A message from 'bot' that is NOT the agent's own message
+  const isSystemMessage = message.id.startsWith('system-');
 
   const alignment = isOwn ? 'justify-end' : 'justify-start';
 

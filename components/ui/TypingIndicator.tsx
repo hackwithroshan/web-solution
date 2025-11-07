@@ -29,7 +29,7 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({ senderType }) => {
             <span className="w-2 h-2 bg-gray-400 rounded-full animate-typing-bounce" style={{ animationDelay: '0.3s' }}></span>
           </div>
         </div>
-        <p className="text-xs text-gray-400 mt-1 px-1">{text}</p>
+        <p className="text-xs text-gray-600 mt-1 px-1">{text}</p>
       </div>
     </div>
   );

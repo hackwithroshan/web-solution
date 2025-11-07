@@ -6,7 +6,6 @@ const router = express.Router();
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
-// @access  Public
 // FIX: Add explicit Request and Response types to the route handler.
 router.post('/register', async (req: Request, res: Response) => {
     const { name, email, password, phone, address, companyName, gstNumber } = req.body;

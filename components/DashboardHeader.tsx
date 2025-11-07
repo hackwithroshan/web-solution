@@ -131,10 +131,10 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                                                 setIsSuggestionsOpen(false);
                                                 setSearchQuery('');
                                             }}
-                                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                            className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100"
                                         >
-                                            <item.icon size={16} className="mr-3 text-gray-400" />
-                                            {item.name}
+                                            <item.icon size={16} />
+                                            <span>{item.name}</span>
                                         </Link>
                                     </li>
                                 ))}
@@ -145,42 +145,35 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
             </div>
 
             {/* Right Side */}
-            <div className="flex items-center space-x-3 md:space-x-5">
-                 <div className="hidden sm:flex flex-col items-end">
-                    <span className="text-sm font-semibold text-gray-700">
-                        {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                        {currentTime.toLocaleDateString([], { weekday: 'short', month: 'long', day: 'numeric' })}
-                    </span>
-                </div>
-                 <Link to="/user/refer-earn" className="hidden sm:flex items-center gap-2 bg-black text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-gray-800 transition-colors">
-                    <Gift size={14} />
-                    <span>Refer & Earn</span>
-                 </Link>
-                 
-                 {/* Notifications */}
-                 <div className="relative" ref={notificationsRef}>
-                     <button onClick={() => setIsNotificationsOpen(prev => !prev)} className="relative text-gray-500 hover:text-gray-700">
+            <div className="flex items-center gap-4">
+                <Link to="/user/refer-earn" className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-500 text-white font-semibold px-5 py-2.5 rounded-full text-sm shadow-md hover:shadow-lg hover:scale-105 transform transition-all duration-300">
+                    <Gift size={16} />
+                    Refer & Earn
+                </Link>
+                 <div ref={notificationsRef}>
+                    <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className="relative text-gray-500 hover:text-gray-700">
                         <Bell size={22}/>
                         {unreadCount > 0 && (
-                             <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                                {unreadCount}
-                            </span>
+                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">{unreadCount}</span>
                         )}
-                     </button>
-                     {isNotificationsOpen && <NotificationPanel notifications={notifications} onUpdate={handleNotificationsUpdate} onClose={() => setIsNotificationsOpen(false)} />}
-                 </div>
-
-                 {/* User Menu */}
-                 <div className="relative" ref={userMenuRef}>
-                    <button onClick={() => setIsUserMenuOpen(prev => !prev)} className="flex items-center space-x-3">
+                    </button>
+                    {isNotificationsOpen && (
+                        <NotificationPanel notifications={notifications} onUpdate={handleNotificationsUpdate} onClose={() => setIsNotificationsOpen(false)} />
+                    )}
+                </div>
+                 <div className="flex items-center space-x-3 relative" ref={userMenuRef}>
+                     <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="flex items-center gap-2">
                          <div className="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm">
                             {user?.name.charAt(0).toUpperCase()}
                          </div>
-                         <span className="font-semibold text-sm hidden sm:block">{user?.name}</span>
-                    </button>
-                    {isUserMenuOpen && <UserMenu onClose={() => setIsUserMenuOpen(false)} />}
+                         <div className="hidden md:block text-left">
+                            <p className="font-semibold text-sm text-gray-700">{user?.name}</p>
+                            <p className="text-xs text-gray-500">{currentTime.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}</p>
+                         </div>
+                     </button>
+                     {isUserMenuOpen && (
+                        <UserMenu onClose={() => setIsUserMenuOpen(false)} />
+                     )}
                  </div>
             </div>
         </header>

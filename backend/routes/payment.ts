@@ -27,7 +27,7 @@ router.use(protect);
 // @desc    Create a new order from cart items
 // @route   POST /api/payment/create-cart-order
 router.post('/create-cart-order', async (req: Request, res: Response, next: NextFunction) => {
-    const { cartData } = req.body; // Expects an array of { planId: string, domainName?: string }
+    const { cartData } = req.body; // Expects an array of { planId, tierName, billingCycle, domainName }
 
     try {
         if (!req.user) throw new ApiError(401, 'Not authorized');
@@ -42,28 +42,41 @@ router.post('/create-cart-order', async (req: Request, res: Response, next: Next
             throw new ApiError(404, 'One or more service plans not found.');
         }
 
-        let totalAmount = 0;
+        let subtotal = 0;
         const orderItems = cartData.map(cartItem => {
             const plan = plans.find(p => p._id.toString() === cartItem.planId);
-            if (!plan) throw new ApiError(500, 'Internal error processing cart item.'); // Should not happen
-            totalAmount += plan.price;
+            if (!plan) throw new ApiError(500, 'Internal error processing cart item.');
+            
+            const tier = plan.plans.find(t => t.name === cartItem.tierName);
+            if (!tier) throw new ApiError(400, `Invalid tier '${cartItem.tierName}' for plan '${plan.name}'.`);
+            
+            const price = cartItem.billingCycle === 'yearly' ? tier.yearlyPrice : tier.monthlyPrice;
+            subtotal += price;
+
             return {
                 plan: plan._id,
                 itemType: 'new_purchase' as const,
-                price: plan.price,
+                price: price,
+                tierName: cartItem.tierName,
+                billingCycle: cartItem.billingCycle,
                 domainName: cartItem.domainName,
             };
         });
 
+        const taxAmount = subtotal * 0.18;
+        const totalAmount = subtotal + taxAmount;
+
         const newOrder = new Order({
             user: req.user._id,
             items: orderItems,
-            totalAmount: totalAmount,
+            subtotal,
+            taxAmount,
+            totalAmount,
             status: 'pending',
         });
 
         const razorpayOrder = await razorpay.orders.create({
-            amount: totalAmount * 100, // Amount in paise
+            amount: Math.round(totalAmount * 100), // Amount in paise
             currency: 'INR',
             receipt: newOrder._id.toString(),
         });
@@ -77,6 +90,7 @@ router.post('/create-cart-order', async (req: Request, res: Response, next: Next
         next(error);
     }
 });
+
 
 // @desc    Verify payment for a cart order and activate services
 // @route   POST /api/payment/verify-cart-payment
@@ -117,13 +131,13 @@ router.post('/verify-cart-payment', async (req: Request, res: Response, next: Ne
                 const plan = item.plan as any; // Populated
                 if (item.itemType === 'new_purchase' && plan) {
                     const renewalDate = new Date();
-                    // Assuming yearly plans for simplicity
-                    renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+                    const billingPeriod = item.billingCycle === 'yearly' ? 12 : 1;
+                    renewalDate.setMonth(renewalDate.getMonth() + billingPeriod);
                     
                     await Service.create({
                         user: req.user._id,
-                        planName: plan.name,
-                        price: plan.price,
+                        planName: `${plan.name} - ${item.tierName}`,
+                        price: item.price,
                         status: 'active',
                         startDate: new Date(),
                         renewalDate: renewalDate,
@@ -161,9 +175,9 @@ router.post('/create-renewal-order', async (req: Request, res: Response, next: N
             throw new ApiError(404, 'One or more services not found or do not belong to you.');
         }
 
-        let totalAmount = 0;
+        let subtotal = 0;
         const orderItems = services.map(service => {
-            totalAmount += service.price;
+            subtotal += service.price;
             return {
                 service: service._id,
                 itemType: 'renewal' as const,
@@ -171,15 +185,20 @@ router.post('/create-renewal-order', async (req: Request, res: Response, next: N
             };
         });
 
+        const taxAmount = subtotal * 0.18;
+        const totalAmount = subtotal + taxAmount;
+
         const newOrder = new Order({
             user: req.user._id,
             items: orderItems,
-            totalAmount: totalAmount,
+            subtotal,
+            taxAmount,
+            totalAmount,
             status: 'pending',
         });
 
         const razorpayOrder = await razorpay.orders.create({
-            amount: totalAmount * 100,
+            amount: Math.round(totalAmount * 100),
             currency: 'INR',
             receipt: newOrder._id.toString(),
         });
@@ -226,11 +245,10 @@ router.post('/verify-renewal-payment', async (req: Request, res: Response, next:
             // Renew services
             for (const item of order.items) {
                 if (item.itemType === 'renewal' && item.service) {
-                    // FIX: Removed unnecessary and incorrect type assertion `as IService | null`.
-                    // The type inferred from `Service.findById` is correct and includes the `save` method.
                     const service = await Service.findById(item.service);
                     if (service) {
                         const newRenewalDate = new Date(service.renewalDate);
+                        // Simple assumption: renewal adds a year. A more complex system might check original term.
                         newRenewalDate.setFullYear(newRenewalDate.getFullYear() + 1);
                         service.renewalDate = newRenewalDate;
                         service.status = 'active'; // Reactivate if expired

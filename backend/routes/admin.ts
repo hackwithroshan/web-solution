@@ -350,6 +350,13 @@ router.get('/service-plans', async (req: Request, res: Response, next: NextFunct
 // @route   POST /api/admin/service-plans
 router.post('/service-plans', async (req: Request, res: Response, next: NextFunction) => {
     try {
+        // Ensure only one plan can be popular
+        if (req.body.plans) {
+            const popularCount = req.body.plans.filter((p: any) => p.isPopular).length;
+            if (popularCount > 1) {
+                throw new ApiError(400, 'Only one plan tier can be marked as popular.');
+            }
+        }
         const plan = new ServicePlan(req.body);
         const createdPlan = await plan.save();
         res.status(201).json(createdPlan);
@@ -362,6 +369,13 @@ router.post('/service-plans', async (req: Request, res: Response, next: NextFunc
 // @route   PUT /api/admin/service-plans/:id
 router.put('/service-plans/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
+        // Ensure only one plan can be popular
+        if (req.body.plans) {
+            const popularCount = req.body.plans.filter((p: any) => p.isPopular).length;
+            if (popularCount > 1) {
+                throw new ApiError(400, 'Only one plan tier can be marked as popular.');
+            }
+        }
         const plan = await ServicePlan.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!plan) throw new ApiError(404, 'Service plan not found');
         res.json(plan);
@@ -369,6 +383,7 @@ router.put('/service-plans/:id', async (req: Request, res: Response, next: NextF
         next(error);
     }
 });
+
 
 // @desc    Delete service plan
 // @route   DELETE /api/admin/service-plans/:id

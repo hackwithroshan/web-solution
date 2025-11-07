@@ -15,7 +15,7 @@ const formatDate = (dateString: string) => {
 export const generateInvoice = async (payment: Payment, user: User): Promise<void> => {
     // Dynamically import jspdf and its autotable plugin to prevent build-time import issues
     const { jsPDF } = await import('jspdf');
-    await import('jspdf-autotable');
+    const { default: autoTable } = await import('jspdf-autotable');
 
     // Define the augmented type inside the function scope
     type jsPDFWithAutoTable = import('jspdf').jsPDF & {
@@ -24,6 +24,7 @@ export const generateInvoice = async (payment: Payment, user: User): Promise<voi
     };
     
     const doc = new jsPDF() as jsPDFWithAutoTable;
+    (doc as any).autoTable = autoTable;
 
     // --- Fonts & Colors ---
     const headerFont = 'helvetica'; // sans-serif
@@ -111,7 +112,7 @@ export const generateInvoice = async (payment: Payment, user: User): Promise<voi
     doc.text(user.phone, 14, billedToY);
 
     // --- Table ---
-    const tableColumn = ["DESCRIPTION", "PRICE", "DISCOUNT", "TOTAL EXCL. GST", "GST", "AMOUNT (INR)"];
+    const tableColumn = ["DESCRIPTION", "PRICE", "QTY", "AMOUNT (INR)"];
     const tableRows: any[] = [];
     
     payment.order.items.forEach(item => {
@@ -136,10 +137,8 @@ export const generateInvoice = async (payment: Payment, user: User): Promise<voi
         
         const row = [
             fullDescription,
-            `₹${item.price.toFixed(2)} x 1`,
-            '—', // No discount data
             `₹${item.price.toFixed(2)}`,
-            '₹0.00', // No GST data
+            '1',
             { content: `₹${item.price.toFixed(2)}`, styles: { fontStyle: 'bold' } }
         ];
         tableRows.push(row);
@@ -168,16 +167,15 @@ export const generateInvoice = async (payment: Payment, user: User): Promise<voi
             lineColor: [220, 220, 220]
         },
         columnStyles: {
-            0: { cellWidth: 80 },
+            0: { cellWidth: 100 },
             1: { halign: 'right' },
-            2: { halign: 'right' },
+            2: { halign: 'center' },
             3: { halign: 'right' },
-            4: { halign: 'right' },
-            5: { halign: 'right' },
         },
-        didDrawPage: (data) => {
+        didDrawPage: (data: any) => {
+            if (!payment.order) return;
             // --- Totals Section ---
-            const finalY = doc.lastAutoTable.finalY + 10;
+            const finalY = (doc.lastAutoTable as any).finalY + 10;
             
             doc.setFontSize(10);
             doc.setFont(bodyFont, 'normal');
@@ -186,31 +184,34 @@ export const generateInvoice = async (payment: Payment, user: User): Promise<voi
             const totalsX = 165;
             const valuesX = 200;
 
-            doc.text('Total excl. GST', totalsX, finalY, { align: 'right' });
-            doc.text(`₹${payment.amount.toFixed(2)}`, valuesX, finalY, { align: 'right' });
+            doc.text('Subtotal', totalsX, finalY, { align: 'right' });
+            doc.text(`₹${payment.order.subtotal.toFixed(2)}`, valuesX, finalY, { align: 'right' });
             
+            doc.text('GST (18%)', totalsX, finalY + 7, { align: 'right' });
+            doc.text(`₹${payment.order.taxAmount.toFixed(2)}`, valuesX, finalY + 7, { align: 'right' });
+
             doc.setLineWidth(0.2);
-            doc.line(130, finalY + 5, 200, finalY + 5);
+            doc.line(130, finalY + 12, 200, finalY + 12);
 
             doc.setFontSize(12);
             doc.setFont(headerFont, 'bold');
             doc.setTextColor(primaryColor);
-            doc.text('Total', totalsX, finalY + 12, { align: 'right' });
-            doc.text(`₹${payment.amount.toFixed(2)}`, valuesX, finalY + 12, { align: 'right' });
+            doc.text('Total', totalsX, finalY + 19, { align: 'right' });
+            doc.text(`₹${payment.order.totalAmount.toFixed(2)}`, valuesX, finalY + 19, { align: 'right' });
 
             doc.setFontSize(10);
             doc.setFont(bodyFont, 'normal');
             doc.setTextColor(secondaryColor);
-            doc.text(`Payments (₹${payment.amount.toFixed(2)})`, totalsX, finalY + 19, {align: 'right'});
+            doc.text(`Payments (₹${payment.order.totalAmount.toFixed(2)})`, totalsX, finalY + 26, {align: 'right'});
 
             doc.setLineWidth(0.2);
-            doc.line(130, finalY + 24, 200, finalY + 24);
+            doc.line(130, finalY + 31, 200, finalY + 31);
 
             doc.setFontSize(11);
             doc.setFont(headerFont, 'bold');
             doc.setTextColor(primaryColor);
-            doc.text('Amount Due (INR)', totalsX, finalY + 31, { align: 'right' });
-            doc.text('₹0.00', valuesX, finalY + 31, { align: 'right' });
+            doc.text('Amount Due (INR)', totalsX, finalY + 38, { align: 'right' });
+            doc.text('₹0.00', valuesX, finalY + 38, { align: 'right' });
         }
     });
 

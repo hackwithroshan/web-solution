@@ -42,14 +42,18 @@ const renderServiceDescription = (payment: Payment) => {
         return 'N/A';
     }
     const firstItem = payment.order.items[0];
-    const firstItemName = firstItem.itemType === 'new_purchase' 
-        ? firstItem.plan?.name 
-        : firstItem.service?.planName;
+    
+    let baseName = 'Service Purchase';
+    if (firstItem.itemType === 'new_purchase' && firstItem.plan) {
+         baseName = `${firstItem.plan.name} - ${firstItem.tierName} (${firstItem.billingCycle})`;
+    } else if (firstItem.itemType === 'renewal' && firstItem.service) {
+        baseName = `${firstItem.service.planName} (Renewal)`;
+    }
     
     if (payment.order.items.length > 1) {
-        return `${firstItemName} + ${payment.order.items.length - 1} more`;
+        return `${baseName} + ${payment.order.items.length - 1} more`;
     }
-    return firstItemName || 'Service details';
+    return baseName;
 };
 
 
@@ -74,7 +78,6 @@ const PaymentHistoryPage: React.FC = () => {
                 }
             }
         };
-        // Simulate loading for demo purposes
         setTimeout(loadPayments, 1000);
     }, [user, addToast]);
     
@@ -85,7 +88,6 @@ const PaymentHistoryPage: React.FC = () => {
         }
         setDownloadingId(payment._id);
         try {
-            // Client-side PDF generation
             await generateInvoice(payment, user);
         } catch (error) {
             addToast('Failed to generate invoice.', 'error');

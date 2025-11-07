@@ -18,7 +18,7 @@ router.use(protect);
 
 // @desc    Get the current user's tickets
 // @route   GET /api/tickets
-router.get('/', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.user) {
             throw new ApiError(401, "Not authorized");
@@ -32,7 +32,7 @@ router.get('/', async (req: express.Request, res: express.Response, next: expres
 
 // @desc    Create a new ticket
 // @route   POST /api/tickets
-router.post('/', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const { subject, message } = req.body;
     try {
         if (!req.user) {
@@ -62,7 +62,7 @@ router.post('/', async (req: express.Request, res: express.Response, next: expre
 
 // @desc    Request a callback
 // @route   POST /api/tickets/request-callback
-router.post('/request-callback', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/request-callback', async (req: Request, res: Response, next: NextFunction) => {
     const { phone, message } = req.body;
     try {
         if (!req.user) throw new ApiError(401, 'Not authorized');
@@ -101,7 +101,7 @@ router.post('/request-callback', async (req: express.Request, res: express.Respo
 
 // @desc    Get all tickets (admin or support)
 // @route   GET /api/tickets/all
-router.get('/all', support, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/all', support, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const tickets = await Ticket.aggregate([
             {
@@ -140,7 +140,7 @@ router.get('/all', support, async (req: express.Request, res: express.Response, 
 
 // @desc    Get a single ticket by ID (for admin, support, or ticket owner)
 // @route   GET /api/tickets/:id
-router.get('/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         // FIX: Replaced `mongoose.Types.ObjectId.isValid` with `mongoose.isObjectIdOrHexString` to resolve a type error where `isValid` was not found on the ObjectId class.
         if (!mongoose.isObjectIdOrHexString(req.params.id)) {
@@ -205,7 +205,7 @@ router.get('/:id', async (req: express.Request, res: express.Response, next: exp
 
 // @desc    Send a message in a ticket
 // @route   POST /api/tickets/:id/messages
-router.post('/:id/messages', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/:id/messages', async (req: Request, res: Response, next: NextFunction) => {
     const { text } = req.body;
     try {
         if (!req.user) {
@@ -236,7 +236,7 @@ router.post('/:id/messages', async (req: express.Request, res: express.Response,
 // @desc    Upload an attachment to a ticket
 // @route   POST /api/tickets/:id/upload
 // FIX: Add explicit Request, Response, and NextFunction types to resolve overload error.
-router.post('/:id/upload', upload.single('attachment'), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.post('/:id/upload', upload.single('attachment'), async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.file) throw new ApiError(400, 'Please upload a file');
         if (!req.user) {
@@ -269,7 +269,7 @@ router.post('/:id/upload', upload.single('attachment'), async (req: express.Requ
 
 // @desc    Update ticket status, assignment, priority (admin)
 // @route   PUT /api/tickets/:id
-router.put('/:id', admin, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.put('/:id', admin, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const ticket = await Ticket.findById(req.params.id);
         if (!ticket) throw new ApiError(404, 'Ticket not found');

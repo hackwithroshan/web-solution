@@ -1,5 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
+import { Link } from 'react-router-dom';
+import { Code, Smartphone, BrainCircuit, Megaphone, TrendingUp, Server } from 'lucide-react';
 
 const DEFAULT_PARTICLE_COUNT = 12;
 const DEFAULT_SPOTLIGHT_RADIUS = 300;
@@ -7,49 +9,57 @@ const DEFAULT_GLOW_COLOR = '132, 0, 255';
 const MOBILE_BREAKPOINT = 768;
 
 const cardData = [
-  {
+ {
     color: '#060010',
-    title: 'Analytics',
-    description: 'Track user behavior and gain valuable insights.',
-    label: 'Insights',
-    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto/v1720108333/analytics_bg.jpg'
+    title: 'Social Media Marketing',
+    description: 'Strategic social media growth with content planning, branding, engagement and community management.',
+    label: 'Marketing',
+    icon: Megaphone,
+    path: '/services/social-media-marketing'
   },
   {
     color: '#060010',
-    title: 'Dashboard',
-    description: 'A centralized view of all your important data.',
-    label: 'Overview',
-    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto/v1720108333/dashboard_bg.jpg'
+    title: 'Mobile App Development',
+    description: 'High-performing mobile applications that run smoothly across Android, iOS, and cross-platform environments.',
+    label: 'Mobile',
+    icon: Smartphone,
+    path: '/services/mobile-app-development'
+  },
+   {
+    color: '#060010',
+    title: 'VPS & Cloud Server Hosting',
+    description: 'Fast, secure and reliable UK-based hosting infrastructure for mission-critical websites and applications.',
+    label: 'Hosting',
+    icon: Server,
+    path: '/services/vps-cloud-hosting'
   },
   {
     color: '#060010',
-    title: 'Collaboration',
-    description: 'Work together with your team seamlessly.',
-    label: 'Teamwork',
-    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/v1761547440/programming-background-collage_2_gs0lep.webp'
+    title: 'Web & Software Development',
+    description: 'Secure, scalable and high-performance web & software solutions tailored for business growth.',
+    label: 'Development',
+    icon: Code,
+    path: '/services/web-development'
   },
   {
     color: '#060010',
-    title: 'Automation',
-    description: 'Streamline your workflows and increase efficiency.',
-    label: 'Efficiency',
-    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/v1761547439/programming-background-collage_rvfwix.webp'
+    title: 'Paid Advertising & Promotions',
+    description: 'ROI-focused paid campaigns across Meta, Google, TikTok, and LinkedIn designed to scale conversions and brand reach.',
+    label: 'Advertising',
+    icon: TrendingUp,
+    path: '/services/paid-advertising'
   },
   {
     color: '#060010',
-    title: 'Integration',
-    description: 'Connect all your favorite tools and services.',
-    label: 'Connectivity',
-    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto/v1720108333/integration_bg.jpg'
-  },
-  {
-    color: '#060010',
-    title: 'Security',
-    description: 'Enterprise-grade protection for your data.',
-    label: 'Protection',
-    img: 'https://res.cloudinary.com/dvrqft9ov/image/upload/f_auto,q_auto/v1720108333/security_bg.jpg'
+    title: 'AI & ML Development',
+    description: 'AI-powered automation, predictive analytics and intelligent chat systems that enhance operational efficiency.',
+    label: 'AI / ML',
+    icon: BrainCircuit,
+    path: '/services/ai-ml-development'
   }
 ];
+
+
 
 const createParticleElement = (x: number, y: number, color = DEFAULT_GLOW_COLOR) => {
   const el = document.createElement('div');
@@ -581,17 +591,17 @@ const MagicBento: React.FC<MagicBentoProps> = ({
               grid-template-rows: repeat(3, 1fr);
             }
             
-            .card-responsive .card:nth-child(3) {
+            .card-responsive > a:nth-child(3) {
               grid-column: span 2;
               grid-row: span 2;
             }
             
-            .card-responsive .card:nth-child(4) {
+            .card-responsive > a:nth-child(4) {
               grid-column: 1 / span 2;
               grid-row: 2 / span 2;
             }
             
-            .card-responsive .card:nth-child(6) {
+            .card-responsive > a:nth-child(6) {
               grid-column: 4;
               grid-row: 3;
             }
@@ -652,22 +662,6 @@ const MagicBento: React.FC<MagicBentoProps> = ({
             overflow: hidden;
             text-overflow: ellipsis;
           }
-
-          .card .card-background-image {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 20px;
-            opacity: 0.3;
-            transition: opacity 0.3s ease-in-out;
-          }
-
-          .card:hover .card-background-image {
-            opacity: 0.5;
-          }
           
           @media (max-width: 599px) {
             .card-responsive {
@@ -698,7 +692,7 @@ const MagicBento: React.FC<MagicBentoProps> = ({
       <BentoCardGrid gridRef={gridRef}>
         <div className="card-responsive gap-2">
           {cardData.map((card, index) => {
-            const baseClassName = `card flex flex-col justify-between relative aspect-[4/3] min-h-[200px] w-full max-w-full p-5 rounded-[20px] border border-solid font-light overflow-hidden transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)] ${
+            const baseClassName = `group card flex flex-col justify-between relative aspect-[4/3] min-h-[200px] w-full max-w-full p-5 rounded-[20px] border border-solid font-light overflow-hidden transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)] ${
               enableBorderGlow ? 'card--border-glow' : ''
             }`;
 
@@ -712,11 +706,12 @@ const MagicBento: React.FC<MagicBentoProps> = ({
               '--glow-radius': '200px'
             } as React.CSSProperties;
 
+            const Icon = card.icon;
             const cardContent = (
                 <>
-                    <img src={card.img} alt={card.title} className="card-background-image" loading="lazy" decoding="async" />
-                    <div className="card__header flex justify-between gap-3 relative text-white z-10">
+                    <div className="card__header flex justify-between items-start gap-3 relative text-white z-10">
                         <span className="card__label text-base">{card.label}</span>
+                        <Icon className="w-8 h-8 text-cyan-400 opacity-70 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <div className="card__content flex flex-col relative text-white z-10">
                         <h3 className={`card__title font-normal text-base m-0 mb-1 ${textAutoHide ? 'text-clamp-1' : ''}`}>
@@ -732,20 +727,21 @@ const MagicBento: React.FC<MagicBentoProps> = ({
             );
 
             return (
-              <ParticleCard
-                key={index}
-                className={baseClassName}
-                style={cardStyle}
-                disableAnimations={shouldDisableAnimations}
-                particleCount={particleCount}
-                glowColor={glowColor}
-                enableTilt={enableTilt}
-                clickEffect={clickEffect}
-                enableMagnetism={enableMagnetism}
-                enableStars={enableStars}
-              >
-                {cardContent}
-              </ParticleCard>
+              <Link to={card.path} key={index} className="block no-underline">
+                  <ParticleCard
+                    className={baseClassName}
+                    style={cardStyle}
+                    disableAnimations={shouldDisableAnimations}
+                    particleCount={particleCount}
+                    glowColor={glowColor}
+                    enableTilt={enableTilt}
+                    clickEffect={clickEffect}
+                    enableMagnetism={enableMagnetism}
+                    enableStars={enableStars}
+                  >
+                    {cardContent}
+                  </ParticleCard>
+              </Link>
             );
           })}
         </div>

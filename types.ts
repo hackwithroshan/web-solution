@@ -126,16 +126,23 @@ export interface ServiceCategory {
   name: string;
 }
 
+export interface PlanTier {
+  name: 'Starter' | 'Professional' | 'Enterprise';
+  monthlyPrice: number;
+  yearlyPrice: number;
+  features: string[];
+  isPopular: boolean;
+}
+
 export interface ServicePlan {
   _id: string;
   name: string;
   category: ServiceCategory;
-  price: number;
-  priceUnit: '/year' | '/project' | '/month';
   description: string;
-  keyFeatures: string[];
+  plans: PlanTier[];
   tags: string[];
 }
+
 
 export interface Payment {
   _id: string;
@@ -191,26 +198,33 @@ export interface ChatbotKnowledge {
 
 // Types for Cart and Order System
 export interface CartItem {
+    planId: string; // The ID of the main ServicePlan
     plan: ServicePlan;
-    quantity: number;
+    tierName: 'Starter' | 'Professional' | 'Enterprise';
+    billingCycle: 'monthly' | 'yearly';
     domainName?: string;
 }
+
 
 export type OrderItemType = 'new_purchase' | 'renewal';
 
 export interface OrderItem {
     plan?: ServicePlan; // For new purchases
     service?: UserService; // For renewals
+    tierName?: 'Starter' | 'Professional' | 'Enterprise';
+    billingCycle?: 'monthly' | 'yearly';
     itemType: OrderItemType;
     price: number;
-    // FIX: Add missing 'domainName' property to align with backend models and prevent type errors.
     domainName?: string;
 }
+
 
 export interface Order {
     _id: string;
     user: User;
     items: OrderItem[];
+    subtotal: number;
+    taxAmount: number;
     totalAmount: number;
     status: 'pending' | 'completed' | 'failed';
     razorpayOrderId: string;

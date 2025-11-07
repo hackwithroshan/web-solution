@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { User, UserService, UserRole, ServicePlan } from '../types';
@@ -155,10 +153,14 @@ const AdminManageUserPage: React.FC = () => {
         try {
             const selectedPlan = allPlans.find(p => p._id === newServiceData.planId);
             if (!selectedPlan) throw new Error('Selected plan not found.');
+            
+            // Default to Starter plan for admin-added services
+            const starterTier = selectedPlan.plans.find(p => p.name === 'Starter');
+            if (!starterTier) throw new Error('Starter tier not found for this plan.');
 
             await adminAddServiceToUser(id, {
-                planName: selectedPlan.name,
-                price: selectedPlan.price,
+                planName: `${selectedPlan.name} - Starter`,
+                price: starterTier.monthlyPrice, // or yearly, depending on business logic for admin
                 startDate: new Date().toISOString(),
                 renewalDate: newServiceData.renewalDate,
                 status: 'active'
@@ -259,7 +261,11 @@ const AdminManageUserPage: React.FC = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Service Plan</label>
                                         <select value={newServiceData.planId} onChange={e => setNewServiceData({...newServiceData, planId: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-black" required>
                                             <option value="">Select a plan...</option>
-                                            {allPlans.map(p => <option key={p._id} value={p._id}>{p.name} (₹{p.price})</option>)}
+                                            {allPlans.map(p => (
+                                                <option key={p._id} value={p._id}>
+                                                    {p.name} (Starts at ₹{p.plans.find(t => t.name === 'Starter')?.monthlyPrice || 0})
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                     <Input label="Next Renewal Date" type="date" value={newServiceData.renewalDate} onChange={e => setNewServiceData({...newServiceData, renewalDate: e.target.value})} required variant="light"/>
