@@ -27,9 +27,9 @@ const cardData = [
   },
    {
     color: '#060010',
-    title: 'VPS & Cloud Server Hosting',
-    description: 'Fast, secure and reliable UK-based hosting infrastructure for mission-critical websites and applications.',
-    label: 'Hosting',
+    title: 'CRM & Business Workflow Systems',
+    description: 'Streamline your operations with custom CRM and automated business workflow systems designed for efficiency and growth.',
+    label: 'Crm',
     icon: Server,
     path: '/services/vps-cloud-hosting'
   },
